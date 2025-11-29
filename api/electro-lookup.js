@@ -42,11 +42,14 @@ async function fetchRealImageFromGoogle(query) {
 
   const url = `https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(
     query
-  )}&searchType=image&num=1&key=${apiKey}&cx=${cx}`;
+  )}&searchType=image&num=1&safe=active&key=${apiKey}&cx=${cx}`;
 
   try {
     const res = await fetch(url);
-    if (!res.ok) return null;
+    if (!res.ok) {
+      console.log("⚠️ Image search HTTP error:", res.status, await res.text());
+      return null;
+    }
     const data = await res.json();
     if (data.items && data.items.length > 0) {
       return data.items[0].link; // real image URL
@@ -55,6 +58,80 @@ async function fetchRealImageFromGoogle(query) {
     console.error("Google Image Search error:", err);
   }
   return null;
+}
+
+/**
+ * Fetch likely datasheet link + a few reference pages using Google Custom Search.
+ * Returns { datasheetUrl, references[] }
+ */
+async function fetchDatasheetAndReferences(query) {
+  const apiKey = process.env.CSE_API_KEY;
+  const cx = process.env.CSE_CX;
+
+  if (!apiKey || !cx || !query) {
+    return { datasheetUrl: null, references: [] };
+  }
+
+  const q = `${query} datasheet pdf`;
+  const url = `https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(
+    q
+  )}&num=5&safe=active&key=${apiKey}&cx=${cx}`;
+
+  try {
+    const res = await fetch(url);
+    if (!res.ok) {
+      console.log("⚠️ Datasheet search HTTP error:", res.status, await res.text());
+      return { datasheetUrl: null, references: [] };
+    }
+
+    const data = await res.json();
+    const items = Array.isArray(data.items) ? data.items : [];
+
+    let datasheetUrl = null;
+    const references = [];
+
+    for (const item of items) {
+      if (!item.link) continue;
+
+      // Heuristic: prefer PDF or obvious manufacturer domains for datasheet
+      const link = item.link;
+      const mime = item.mime || "";
+      const display = (item.displayLink || "").toLowerCase();
+
+      const looksPdf =
+        mime === "application/pdf" ||
+        link.toLowerCase().endsWith(".pdf") ||
+        link.toLowerCase().includes("datasheet");
+
+      const looksManufacturer =
+        display.includes("microchip") ||
+        display.includes("espressif") ||
+        display.includes("st.com") ||
+        display.includes("ti.com") ||
+        display.includes("analog.com") ||
+        display.includes("nxp.com") ||
+        display.includes("infineon") ||
+        display.includes("onsemi") ||
+        display.includes("renesas");
+
+      if (!datasheetUrl && (looksPdf || looksManufacturer)) {
+        datasheetUrl = link;
+      }
+
+      if (references.length < 4) {
+        references.push({
+          title: item.title || "",
+          url: link,
+          snippet: item.snippet || ""
+        });
+      }
+    }
+
+    return { datasheetUrl, references };
+  } catch (err) {
+    console.error("Google Datasheet Search error:", err);
+    return { datasheetUrl: null, references: [] };
+  }
 }
 
 export default async function handler(req, res) {
@@ -103,12 +180,22 @@ FOCUS ONLY ON ELECTRONICS-RELATED ITEMS:
 TASK:
 Look at the provided image and/or text label and identify the most likely electronics-related item.
 
+Write your answer as if it were an encyclopedia entry:
+- Give a short, precise name.
+- In "description", write 2–3 short paragraphs:
+  1) High-level overview and what family it belongs to.
+  2) Internal principle of operation / architecture in simple terms.
+  3) Typical usage patterns and design notes.
+- In "key_specs", list concrete, realistic numbers when commonly known
+  (voltage ranges, current, package, frequency, tolerance, memory size, etc.).
+- In "typical_uses", focus on real-world circuits, boards, and applications.
+
 Respond ONLY with a JSON object in this exact format:
 
 {
   "name": "Short specific name, like 'ESP32 Dev Board' or '10kΩ Carbon Film Resistor'",
   "category": "Component | Microcontroller | Tool | Test Equipment | Module | Power Supply | Other",
-  "description": "1-2 paragraphs explaining what it is in simple words.",
+  "description": "2–3 short paragraphs explaining what it is and how it works, in simple words.",
   "typical_uses": [
     "Where and how this is usually used in electronics projects or industry"
   ],
@@ -116,7 +203,7 @@ Respond ONLY with a JSON object in this exact format:
     "Typical places to buy (local electronics shops, online like Lazada/Shopee/Amazon, distributors like Mouser/Digi-Key, etc.)"
   ],
   "key_specs": [
-    "Important specs or parameters (voltage ratings, current, power, tolerance, package, frequency, etc.) if identifiable. If unsure, be honest."
+    "Important specs or parameters (voltage ratings, current, power, tolerance, package, frequency, memory size, etc.) if identifiable. If unsure, be honest."
   ],
   "datasheet_hint": "Short instruction on what to search on Google to find its datasheet. Include an example search query."
 }
@@ -178,6 +265,13 @@ and briefly explain that it's outside electronics.
     // Attach real Google image
     const realImageUrl = await fetchRealImageFromGoogle(result.name);
     result.real_image = realImageUrl || null;
+
+    // Attach datasheet URL + reference links
+    const { datasheetUrl, references } = await fetchDatasheetAndReferences(
+      result.name
+    );
+    result.datasheet_url = datasheetUrl || null;
+    result.references = references;
 
     return res.status(200).json(result);
   } catch (err) {

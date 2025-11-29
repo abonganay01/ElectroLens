@@ -43,6 +43,9 @@
       .page {
         grid-template-columns: minmax(0, 1fr);
       }
+      body {
+        padding: 14px;
+      }
     }
 
     .card, .side-card {
@@ -353,7 +356,9 @@
     }
 
     .side-inner {
-      padding:16px 16px 14px;
+      padding:16px 16px 12px;
+      max-height: 90vh;
+      overflow-y: auto;
     }
 
     .side-header {
@@ -362,6 +367,7 @@
       align-items:center;
       gap:8px;
       font-size:14px;
+      margin-bottom:4px;
     }
 
     .title-left {
@@ -403,17 +409,17 @@
     }
 
     .section {
-      margin-top:10px;
+      margin-top:8px;
       font-size:13px;
       line-height:1.5;
     }
 
     .section-title {
-      font-size:12px;
+      font-size:11px;
       text-transform:uppercase;
       letter-spacing:0.16em;
       color:var(--muted);
-      margin-bottom:4px;
+      margin-bottom:3px;
     }
 
     .section-content {
@@ -465,7 +471,7 @@
       align-items:center;
       font-size:11px;
       color:var(--muted);
-      margin-top:8px;
+      margin-top:10px;
       gap:8px;
     }
 
@@ -495,7 +501,7 @@
       padding-top:8px;
       border-top:1px dashed rgba(148,163,184,0.5);
       font-size:11px;
-      max-height:150px;
+      max-height:130px;
       overflow:auto;
     }
 
@@ -525,6 +531,40 @@
       margin-top: 4px;
       display: none;
     }
+
+    /* references / links */
+    .ref-link {
+      color:#93c5fd;
+      text-decoration:none;
+    }
+
+    .ref-link:hover {
+      text-decoration:underline;
+    }
+
+    .ref-snippet {
+      font-size:11px;
+      color:var(--muted);
+      margin-top:1px;
+    }
+
+    .datasheet-link {
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      font-size:12px;
+      padding:5px 10px;
+      border-radius:999px;
+      border:1px solid rgba(129,140,248,0.6);
+      background:rgba(30,64,175,0.25);
+      color:#c7d2fe;
+      text-decoration:none;
+      margin-bottom:6px;
+    }
+
+    .datasheet-link:hover {
+      background:rgba(30,64,175,0.45);
+    }
   </style>
 </head>
 <body>
@@ -539,7 +579,8 @@
         <h1>Identify <span>electronics components & tools</span> with AI.</h1>
         <p class="subtext">
           Use your camera, upload a photo, or type the name of a component.
-          ElectroLens will describe it like an Electronics Engineer: usage, specs, where to buy, and how to find its datasheet.
+          ElectroLens mixes AI with web search to act like an electronics encyclopedia:
+          description, specs, where to buy, and datasheet links.
         </p>
 
         <div class="mode-tabs">
@@ -656,7 +697,7 @@
             <span>Electronics Encyclopedia Result</span>
           </div>
           <div class="chip-row">
-            <div class="chip accent">GPT (Gemini) • Vision + Text</div>
+            <div class="chip accent">Gemini • Vision + Text</div>
             <div class="chip">Components • Tools • Boards</div>
           </div>
         </div>
@@ -704,6 +745,15 @@
           <div class="section-title">Datasheet Hint</div>
           <div class="section-content" id="datasheetHint">
             <p class="placeholder">ElectroLens will suggest a search phrase to quickly find the datasheet.</p>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Datasheet & References</div>
+          <div class="section-content" id="referencesSection">
+            <p class="placeholder">
+              When available, a likely official datasheet and a few reference pages will appear here.
+            </p>
           </div>
         </div>
 
@@ -761,6 +811,7 @@
     const whereToBuyEl = document.getElementById("whereToBuy");
     const keySpecsEl = document.getElementById("keySpecs");
     const datasheetHintEl = document.getElementById("datasheetHint");
+    const referencesEl = document.getElementById("referencesSection");
     const refImageEl = document.getElementById("refImage");
     const aiStatusText = document.getElementById("aiStatusText");
     const historyEl = document.getElementById("history");
@@ -939,7 +990,9 @@
         where_to_buy,
         key_specs,
         datasheet_hint,
-        real_image
+        real_image,
+        datasheet_url,
+        references
       } = result;
 
       deviceNameEl.textContent = name || "Unknown device";
@@ -1003,6 +1056,44 @@
         datasheet_hint ||
         "Search for the device name + 'datasheet' in your browser.";
       datasheetHintEl.appendChild(dh);
+
+      // Datasheet + references
+      referencesEl.innerHTML = "";
+
+      if (datasheet_url) {
+        const a = document.createElement("a");
+        a.href = datasheet_url;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        a.className = "datasheet-link";
+        a.innerHTML = "📄 Open datasheet (likely official)";
+        referencesEl.appendChild(a);
+      }
+
+      if (Array.isArray(references) && references.length > 0) {
+        const ul = document.createElement("ul");
+        references.forEach(ref => {
+          const li = document.createElement("li");
+          const link = document.createElement("a");
+          link.href = ref.url;
+          link.target = "_blank";
+          link.rel = "noopener noreferrer";
+          link.className = "ref-link";
+          link.textContent = ref.title || ref.url;
+          li.appendChild(link);
+          if (ref.snippet) {
+            const sn = document.createElement("div");
+            sn.className = "ref-snippet";
+            sn.textContent = ref.snippet;
+            li.appendChild(sn);
+          }
+          ul.appendChild(li);
+        });
+        referencesEl.appendChild(ul);
+      } else if (!datasheet_url) {
+        referencesEl.innerHTML =
+          '<p class="placeholder">No external references found.</p>';
+      }
 
       // Reference image from Google (real_image URL)
       if (real_image) {
