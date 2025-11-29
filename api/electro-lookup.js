@@ -38,24 +38,34 @@ async function fetchRealImageFromGoogle(query) {
   const apiKey = process.env.CSE_API_KEY;
   const cx = process.env.CSE_CX;
 
-  if (!apiKey || !cx || !query) return null;
+  if (!apiKey || !cx || !query) {
+    console.log("⚠️ Missing CSE config or query, skipping image search.");
+    return null;
+  }
 
   const url = `https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(
     query
-  )}&searchType=image&num=1&key=${apiKey}&cx=${cx}`;
+  )}&searchType=image&num=1&safe=active&key=${apiKey}&cx=${cx}`;
 
   try {
     const res = await fetch(url);
-    if (!res.ok) return null;
+    if (!res.ok) {
+      console.log("⚠️ Google image search HTTP error:", res.status, await res.text());
+      return null;
+    }
     const data = await res.json();
     if (data.items && data.items.length > 0) {
-      return data.items[0].link; // real image URL
+      console.log("✅ Got image for", query, "→", data.items[0].link);
+      return data.items[0].link;
+    } else {
+      console.log("⚠️ No image items returned for", query);
     }
   } catch (err) {
     console.error("Google Image Search error:", err);
   }
   return null;
 }
+
 
 export default async function handler(req, res) {
   // Only allow POST
