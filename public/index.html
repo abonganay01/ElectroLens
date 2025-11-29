@@ -1,0 +1,1054 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>ElectroLens – AI Electronics Engineer Encyclopedia</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root {
+      --bg: #020617;
+      --card: #02091a;
+      --accent: #6366f1;
+      --accent-soft: rgba(99, 102, 241, 0.2);
+      --border: rgba(148, 163, 184, 0.35);
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --danger: #fecaca;
+      --radius-lg: 18px;
+      --radius-md: 10px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Inter", sans-serif;
+      min-height: 100vh;
+      background: radial-gradient(circle at top, #0b1220, #020617 55%, #000 100%);
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .page {
+      width: 100%;
+      max-width: 1180px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+      gap: 24px;
+    }
+
+    @media (max-width: 900px) {
+      .page {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    .card, .side-card {
+      border-radius: 24px;
+      border: 1px solid var(--border);
+      background: radial-gradient(circle at top left, #020617, #020617 40%, #020617 100%);
+      box-shadow: 0 18px 45px rgba(15, 23, 42, 0.9);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before, .side-card::before {
+      content: "";
+      position: absolute;
+      inset: -40%;
+      background:
+        radial-gradient(circle at 0 0, rgba(129, 140, 248, 0.25), transparent 60%),
+        radial-gradient(circle at 100% 0, rgba(45, 212, 191, 0.18), transparent 60%);
+      opacity: 0.7;
+      pointer-events: none;
+    }
+
+    .card-inner, .side-inner {
+      position: relative;
+      z-index: 1;
+      padding: 20px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .badge-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #22c55e;
+      box-shadow: 0 0 12px rgba(34, 197, 94, 0.9);
+    }
+
+    h1 {
+      font-size: clamp(26px, 3vw, 30px);
+      line-height: 1.2;
+      margin-bottom: 6px;
+    }
+
+    h1 span {
+      background: linear-gradient(120deg, #818cf8, #22d3ee);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .subtext {
+      font-size: 14px;
+      color: var(--muted);
+      margin-bottom: 12px;
+      max-width: 520px;
+    }
+
+    .mode-tabs {
+      display: inline-flex;
+      padding: 3px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid var(--border);
+      margin-bottom: 10px;
+    }
+
+    .mode-tab {
+      border-radius: 999px;
+      padding: 7px 13px;
+      font-size: 12px;
+      color: var(--muted);
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.12s, color 0.12s;
+    }
+
+    .mode-tab.active {
+      background: rgba(15, 23, 42, 1);
+      color: var(--text);
+    }
+
+    .mode-tab span.icon {
+      font-size: 13px;
+    }
+
+    .mode-panel {
+      margin-top: 10px;
+    }
+
+    .camera-shell {
+      border-radius: 20px;
+      background: radial-gradient(circle at top, #020617, #020617);
+      padding: 14px;
+      border: 1px solid var(--border);
+    }
+
+    .camera-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    .dots { display:flex; gap:4px; }
+    .dot { width:7px; height:7px; border-radius:999px; }
+    .dot.red { background:#f97373; }
+    .dot.amber { background:#facc15; }
+    .dot.green { background:#4ade80; }
+
+    .lens-indicator {
+      display:flex;
+      align-items:center;
+      gap:6px;
+    }
+
+    .lens-led {
+      width:9px;
+      height:9px;
+      border-radius:999px;
+      background:#f97316;
+      box-shadow:0 0 8px rgba(249,115,22,0.9);
+      animation:lens 1.3s infinite;
+    }
+
+    .lens-text {
+      text-transform:uppercase;
+      letter-spacing:0.14em;
+    }
+
+    @keyframes lens {
+      0%,100% { transform:scale(1); opacity:0.8; }
+      50% { transform:scale(1.2); opacity:1; }
+    }
+
+    .glass-frame {
+      position:relative;
+      border-radius:14px;
+      overflow:hidden;
+      background:#020617;
+      border:1px solid rgba(31,41,55,0.9);
+      min-height:260px;
+    }
+
+    video, #uploadPreview {
+      width:100%;
+      display:block;
+      object-fit:cover;
+      background:#020617;
+    }
+
+    #uploadPreview {
+      max-height:320px;
+    }
+
+    .camera-status {
+      position:absolute;
+      left:10px;
+      bottom:10px;
+      font-size:11px;
+      background:rgba(15,23,42,0.85);
+      border-radius:999px;
+      padding:4px 8px;
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      border:1px solid rgba(148,163,184,0.5);
+    }
+
+    .status-dot {
+      width:7px;
+      height:7px;
+      border-radius:50%;
+      background:#f97373;
+      box-shadow:0 0 10px rgba(248,113,113,0.9);
+    }
+
+    .status-dot.on {
+      background:#22c55e;
+      box-shadow:0 0 10px rgba(34,197,94,0.9);
+    }
+
+    .controls {
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      align-items:center;
+      margin-top:12px;
+    }
+
+    .primary-btn {
+      border:none;
+      outline:none;
+      cursor:pointer;
+      border-radius:999px;
+      padding:9px 18px;
+      font-size:14px;
+      font-weight:500;
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      background:radial-gradient(circle at top left,#4f46e5,#1d4ed8);
+      color:white;
+      box-shadow:0 10px 25px rgba(79,70,229,0.6);
+      transition:transform 0.12s,box-shadow 0.12s,filter 0.12s;
+    }
+
+    .primary-btn:disabled {
+      opacity:0.55;
+      cursor:not-allowed;
+      box-shadow:none;
+      transform:none;
+    }
+
+    .primary-btn:hover:not(:disabled) {
+      transform:translateY(-1px);
+      box-shadow:0 16px 40px rgba(79,70,229,0.8);
+      filter:brightness(1.06);
+    }
+
+    .secondary-btn {
+      border-radius:999px;
+      border:1px solid var(--border);
+      background:rgba(15,23,42,0.95);
+      color:var(--muted);
+      padding:8px 14px;
+      font-size:12px;
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      cursor:pointer;
+      transition:background 0.12s,color 0.12s,border-color 0.12s;
+    }
+
+    .secondary-btn:hover {
+      background:rgba(15,23,42,1);
+      color:var(--text);
+      border-color:var(--accent);
+    }
+
+    .pill {
+      font-size:11px;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid var(--border);
+      color:var(--muted);
+      background:rgba(15,23,42,0.9);
+    }
+
+    .hint {
+      font-size:11px;
+      color:var(--muted);
+      margin-top:6px;
+    }
+
+    .manual-input-row {
+      display:flex;
+      gap:8px;
+      margin-top:10px;
+    }
+
+    .manual-input-row input {
+      flex:1;
+      border-radius:999px;
+      border:1px solid var(--border);
+      padding:8px 12px;
+      background:rgba(15,23,42,0.95);
+      color:var(--text);
+      font-size:13px;
+      outline:none;
+    }
+
+    .manual-input-row input::placeholder {
+      color:rgba(148,163,184,0.8);
+    }
+
+    .upload-input {
+      margin-top:6px;
+      font-size:12px;
+      color:var(--muted);
+    }
+
+    .upload-input input[type="file"] {
+      font-size:11px;
+      color:var(--muted);
+    }
+
+    /* SIDE CARD */
+    .side-card {
+      background:rgba(15,23,42,0.98);
+    }
+
+    .side-inner {
+      padding:16px 16px 14px;
+    }
+
+    .side-header {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:8px;
+      font-size:14px;
+    }
+
+    .title-left {
+      display:flex;
+      align-items:center;
+      gap:6px;
+    }
+
+    .title-icon {
+      width:22px;
+      height:22px;
+      border-radius:999px;
+      background:radial-gradient(circle at 30% 0,#a855f7,#4f46e5);
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      font-size:13px;
+    }
+
+    .chip-row {
+      display:flex;
+      flex-wrap:wrap;
+      gap:6px;
+    }
+
+    .chip {
+      font-size:11px;
+      padding:4px 9px;
+      border-radius:999px;
+      background:rgba(15,23,42,1);
+      border:1px solid rgba(148,163,184,0.5);
+      color:var(--muted);
+    }
+
+    .chip.accent {
+      background:rgba(30,64,175,0.45);
+      color:#c7d2fe;
+      border-color:var(--accent);
+    }
+
+    .section {
+      margin-top:10px;
+      font-size:13px;
+      line-height:1.5;
+    }
+
+    .section-title {
+      font-size:12px;
+      text-transform:uppercase;
+      letter-spacing:0.16em;
+      color:var(--muted);
+      margin-bottom:4px;
+    }
+
+    .section-content {
+      font-size:13px;
+    }
+
+    .section ul {
+      padding-left:16px;
+    }
+
+    .section li {
+      margin-bottom:3px;
+    }
+
+    .name-row {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:8px;
+      margin-top:8px;
+    }
+
+    .device-name {
+      font-weight:600;
+      font-size:15px;
+    }
+
+    .device-category {
+      font-size:11px;
+      padding:3px 8px;
+      border-radius:999px;
+      border:1px solid rgba(148,163,184,0.5);
+      background:rgba(15,23,42,1);
+      color:#c7d2fe;
+    }
+
+    .placeholder {
+      color:var(--muted);
+      font-style:italic;
+    }
+
+    .error {
+      color:var(--danger);
+    }
+
+    .status-bar {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      font-size:11px;
+      color:var(--muted);
+      margin-top:8px;
+      gap:8px;
+    }
+
+    .status-dot-ai {
+      width:7px;
+      height:7px;
+      border-radius:999px;
+      background:#22c55e;
+      box-shadow:0 0 10px rgba(34,197,94,0.9);
+      animation:aiPulse 1.4s infinite;
+    }
+
+    @keyframes aiPulse {
+      0% { transform:scale(1); opacity:1; }
+      70% { transform:scale(1.8); opacity:0; }
+      100% { transform:scale(1); opacity:0; }
+    }
+
+    .tiny {
+      font-size:10px;
+      opacity:0.75;
+      text-align:right;
+    }
+
+    .history {
+      margin-top:8px;
+      padding-top:8px;
+      border-top:1px dashed rgba(148,163,184,0.5);
+      font-size:11px;
+      max-height:150px;
+      overflow:auto;
+    }
+
+    .history-item {
+      padding:4px 0;
+      border-bottom:1px dashed rgba(30,64,175,0.5);
+    }
+
+    .history-item:last-child { border-bottom:none; }
+
+    .history-item .time {
+      color:#a5b4fc;
+      font-size:10px;
+      margin-bottom:1px;
+    }
+
+    .history-item .summary {
+      color:#e5e7eb;
+      font-size:11px;
+    }
+
+    /* ref image */
+    #refImage {
+      max-width: 100%;
+      border-radius: 12px;
+      border: 1px solid rgba(148,163,184,0.5);
+      margin-top: 4px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <!-- LEFT: Input modes -->
+    <section class="card">
+      <div class="card-inner">
+        <div class="badge">
+          <span class="badge-dot"></span>
+          ElectroLens • AI Electronics Encyclopedia
+        </div>
+        <h1>Identify <span>electronics components & tools</span> with AI.</h1>
+        <p class="subtext">
+          Use your camera, upload a photo, or type the name of a component.
+          ElectroLens will describe it like an Electronics Engineer: usage, specs, where to buy, and how to find its datasheet.
+        </p>
+
+        <div class="mode-tabs">
+          <button class="mode-tab active" data-mode="camera">
+            <span class="icon">📷</span> Camera
+          </button>
+          <button class="mode-tab" data-mode="upload">
+            <span class="icon">🖼</span> Upload
+          </button>
+          <button class="mode-tab" data-mode="manual">
+            <span class="icon">🔍</span> Type Name
+          </button>
+        </div>
+
+        <!-- CAMERA MODE -->
+        <div class="mode-panel" id="mode-camera">
+          <div class="camera-shell">
+            <div class="camera-top">
+              <div class="dots">
+                <div class="dot red"></div>
+                <div class="dot amber"></div>
+                <div class="dot green"></div>
+              </div>
+              <div class="lens-indicator">
+                <div class="lens-led"></div>
+                <span class="lens-text" id="lensText">waiting…</span>
+              </div>
+            </div>
+
+            <div class="glass-frame">
+              <video id="camera" autoplay playsinline></video>
+              <div class="camera-status">
+                <span class="status-dot" id="cameraDot"></span>
+                <span id="cameraStatusText">Waiting for permission…</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="controls">
+            <button class="primary-btn" id="analyzeCameraBtn" disabled>
+              <span>🔍</span>
+              <span>Analyze from Camera</span>
+            </button>
+
+            <button class="secondary-btn" id="toggleCameraBtn">
+              <span id="toggleCameraText">Start camera</span>
+            </button>
+
+            <div class="pill">
+              Best for quick bench identification (breadboards, dev boards, tools).
+            </div>
+          </div>
+
+          <p class="hint">
+            Tip: Hold a single component or tool near the center with good lighting.
+          </p>
+        </div>
+
+        <!-- UPLOAD MODE -->
+        <div class="mode-panel" id="mode-upload" style="display:none;">
+          <div class="camera-shell">
+            <div class="camera-top">
+              <span style="font-size:11px;color:var(--muted);">Upload a clear photo of one electronics item.</span>
+            </div>
+            <div class="glass-frame">
+              <img id="uploadPreview" alt="Upload preview" style="display:none;" />
+            </div>
+          </div>
+
+          <div class="upload-input">
+            <input type="file" id="fileInput" accept="image/*" />
+          </div>
+
+          <div class="controls">
+            <button class="primary-btn" id="analyzeUploadBtn" disabled>
+              <span>🔍</span>
+              <span>Analyze Uploaded Image</span>
+            </button>
+            <div class="pill">
+              Works well for photos from your phone or lab camera.
+            </div>
+          </div>
+        </div>
+
+        <!-- MANUAL MODE -->
+        <div class="mode-panel" id="mode-manual" style="display:none;">
+          <div class="section-title">Type the name / code</div>
+          <div class="manual-input-row">
+            <input
+              id="manualInput"
+              type="text"
+              placeholder="e.g. 'LM7805 voltage regulator', 'ESP32 DevKitC', '10kΩ resistor 1/4W'"
+            />
+            <button class="primary-btn" id="manualSearchBtn">
+              🔍
+            </button>
+          </div>
+          <p class="hint">
+            Great if the part number is already known. ElectroLens will explain what it is, typical uses, where to buy,
+            key specs, and how to find its datasheet.
+          </p>
+        </div>
+
+        <canvas id="captureCanvas" style="display:none;"></canvas>
+      </div>
+    </section>
+
+    <!-- RIGHT: AI Output -->
+    <aside class="side-card">
+      <div class="side-inner">
+        <div class="side-header">
+          <div class="title-left">
+            <div class="title-icon">⚡</div>
+            <span>Electronics Encyclopedia Result</span>
+          </div>
+          <div class="chip-row">
+            <div class="chip accent">GPT (Gemini) • Vision + Text</div>
+            <div class="chip">Components • Tools • Boards</div>
+          </div>
+        </div>
+
+        <div class="name-row">
+          <div class="device-name" id="deviceName">
+            No device analyzed yet
+          </div>
+          <div class="device-category" id="deviceCategory">
+            —
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Overview</div>
+          <div class="section-content" id="description">
+            <p class="placeholder">
+              Use the camera, upload an image, or type a name to see a detailed explanation like an Electronics Engineer.
+            </p>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Typical Uses</div>
+          <div class="section-content" id="typicalUses">
+            <p class="placeholder">Common applications will appear here (projects, circuits, lab use, etc.).</p>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Where to Buy</div>
+          <div class="section-content" id="whereToBuy">
+            <p class="placeholder">Expected sources (local electronics shops, online marketplaces, distributors).</p>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Key Specs</div>
+          <div class="section-content" id="keySpecs">
+            <p class="placeholder">Important parameters like voltage, current, power rating, package, etc. will show here.</p>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Datasheet Hint</div>
+          <div class="section-content" id="datasheetHint">
+            <p class="placeholder">ElectroLens will suggest a search phrase to quickly find the datasheet.</p>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Reference Image</div>
+          <div class="section-content">
+            <img id="refImage" alt="Reference component image" />
+          </div>
+        </div>
+
+        <div class="status-bar">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <div class="status-dot-ai"></div>
+            <span id="aiStatusText">Ready – choose a mode and analyze.</span>
+          </div>
+          <div class="tiny">
+            Your API keys stay on the server. Frontend only talks to <code>/api/electro-lookup</code>.
+          </div>
+        </div>
+
+        <div class="history" id="history"></div>
+      </div>
+    </aside>
+  </main>
+
+  <script>
+    // DOM references
+    const modeTabs = document.querySelectorAll(".mode-tab");
+    const modePanels = {
+      camera: document.getElementById("mode-camera"),
+      upload: document.getElementById("mode-upload"),
+      manual: document.getElementById("mode-manual")
+    };
+
+    const video = document.getElementById("camera");
+    const analyzeCameraBtn = document.getElementById("analyzeCameraBtn");
+    const toggleCameraBtn = document.getElementById("toggleCameraBtn");
+    const toggleCameraText = document.getElementById("toggleCameraText");
+    const cameraStatusText = document.getElementById("cameraStatusText");
+    const cameraDot = document.getElementById("cameraDot");
+    const lensText = document.getElementById("lensText");
+
+    const fileInput = document.getElementById("fileInput");
+    const uploadPreview = document.getElementById("uploadPreview");
+    const analyzeUploadBtn = document.getElementById("analyzeUploadBtn");
+
+    const manualInput = document.getElementById("manualInput");
+    const manualSearchBtn = document.getElementById("manualSearchBtn");
+
+    const canvas = document.getElementById("captureCanvas");
+    const deviceNameEl = document.getElementById("deviceName");
+    const deviceCategoryEl = document.getElementById("deviceCategory");
+    const descriptionEl = document.getElementById("description");
+    const typicalUsesEl = document.getElementById("typicalUses");
+    const whereToBuyEl = document.getElementById("whereToBuy");
+    const keySpecsEl = document.getElementById("keySpecs");
+    const datasheetHintEl = document.getElementById("datasheetHint");
+    const refImageEl = document.getElementById("refImage");
+    const aiStatusText = document.getElementById("aiStatusText");
+    const historyEl = document.getElementById("history");
+
+    let stream = null;
+    let cameraOn = false;
+    let analyzing = false;
+    let uploadImageDataUrl = null;
+
+    // ----- Mode switching -----
+    modeTabs.forEach(tab => {
+      tab.addEventListener("click", () => {
+        const mode = tab.dataset.mode;
+        modeTabs.forEach(t => t.classList.remove("active"));
+        tab.classList.add("active");
+
+        Object.keys(modePanels).forEach(key => {
+          modePanels[key].style.display = key === mode ? "block" : "none";
+        });
+
+        if (mode !== "camera" && cameraOn) {
+          stopCamera();
+        }
+      });
+    });
+
+    // ----- Camera -----
+    async function startCamera() {
+      try {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          cameraStatusText.textContent = "Camera not supported by this browser.";
+          return;
+        }
+
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "environment" },
+          audio: false
+        });
+        video.srcObject = stream;
+        cameraOn = true;
+        analyzeCameraBtn.disabled = false;
+        cameraDot.classList.add("on");
+        cameraStatusText.textContent = "Camera active";
+        lensText.textContent = "live";
+        toggleCameraText.textContent = "Stop camera";
+      } catch (err) {
+        console.error("Camera error:", err);
+        cameraStatusText.textContent = "Permission denied or no camera.";
+        lensText.textContent = "unavailable";
+        cameraDot.classList.remove("on");
+        analyzeCameraBtn.disabled = true;
+      }
+    }
+
+    function stopCamera() {
+      if (stream) {
+        stream.getTracks().forEach(t => t.stop());
+        stream = null;
+      }
+      video.srcObject = null;
+      cameraOn = false;
+      analyzeCameraBtn.disabled = true;
+      cameraDot.classList.remove("on");
+      cameraStatusText.textContent = "Camera stopped";
+      lensText.textContent = "idle";
+      toggleCameraText.textContent = "Start camera";
+    }
+
+    toggleCameraBtn.addEventListener("click", () => {
+      if (cameraOn) stopCamera();
+      else startCamera();
+    });
+
+    analyzeCameraBtn.addEventListener("click", async () => {
+      if (!cameraOn || analyzing) return;
+      analyzing = true;
+      analyzeCameraBtn.disabled = true;
+
+      aiStatusText.textContent = "Capturing frame and asking ElectroLens…";
+
+      const width = video.videoWidth || 640;
+      const height = video.videoHeight || 480;
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(video, 0, 0, width, height);
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
+
+      await queryElectroLens({ image: dataUrl, queryText: "" });
+
+      analyzing = false;
+      analyzeCameraBtn.disabled = !cameraOn;
+    });
+
+    // ----- Upload -----
+    fileInput.addEventListener("change", () => {
+      const file = fileInput.files && fileInput.files[0];
+      if (!file) {
+        uploadImageDataUrl = null;
+        uploadPreview.style.display = "none";
+        analyzeUploadBtn.disabled = true;
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = e => {
+        uploadImageDataUrl = e.target.result;
+        uploadPreview.src = uploadImageDataUrl;
+        uploadPreview.style.display = "block";
+        analyzeUploadBtn.disabled = false;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    analyzeUploadBtn.addEventListener("click", async () => {
+      if (!uploadImageDataUrl || analyzing) return;
+      analyzing = true;
+      analyzeUploadBtn.disabled = true;
+
+      aiStatusText.textContent = "Analyzing uploaded image…";
+      await queryElectroLens({ image: uploadImageDataUrl, queryText: "" });
+
+      analyzing = false;
+      analyzeUploadBtn.disabled = false;
+    });
+
+    // ----- Manual search -----
+    manualSearchBtn.addEventListener("click", async () => {
+      const text = manualInput.value.trim();
+      if (!text || analyzing) return;
+      analyzing = true;
+      manualSearchBtn.disabled = true;
+
+      aiStatusText.textContent = "Looking up this electronics item in ElectroLens…";
+      await queryElectroLens({ image: null, queryText: text });
+
+      analyzing = false;
+      manualSearchBtn.disabled = false;
+    });
+
+    manualInput.addEventListener("keypress", e => {
+      if (e.key === "Enter") {
+        manualSearchBtn.click();
+      }
+    });
+
+    // ----- Common API call -----
+    async function queryElectroLens({ image, queryText }) {
+      try {
+        const res = await fetch("/api/electro-lookup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ image, queryText })
+        });
+
+        if (!res.ok) throw new Error("Backend error");
+        const json = await res.json();
+        renderResult(json, queryText);
+        addToHistory(json, queryText);
+        aiStatusText.textContent = "Done – analyze another component or tool.";
+      } catch (err) {
+        console.error(err);
+        descriptionEl.innerHTML =
+          '<p class="error">Failed to analyze. Check server logs or your API key.</p>';
+        aiStatusText.textContent = "Error – see console/server logs.";
+      }
+    }
+
+    // ----- Render result -----
+    function renderResult(result, queryText) {
+      const {
+        name,
+        category,
+        description,
+        typical_uses,
+        where_to_buy,
+        key_specs,
+        datasheet_hint,
+        real_image
+      } = result;
+
+      deviceNameEl.textContent = name || "Unknown device";
+      deviceCategoryEl.textContent = category || "Other";
+
+      // Description
+      descriptionEl.innerHTML = "";
+      const p = document.createElement("p");
+      p.textContent = description || "No description.";
+      descriptionEl.appendChild(p);
+
+      // Typical uses
+      typicalUsesEl.innerHTML = "";
+      if (Array.isArray(typical_uses) && typical_uses.length > 0) {
+        const ul = document.createElement("ul");
+        typical_uses.forEach(u => {
+          const li = document.createElement("li");
+          li.textContent = u;
+          ul.appendChild(li);
+        });
+        typicalUsesEl.appendChild(ul);
+      } else {
+        typicalUsesEl.innerHTML =
+          '<p class="placeholder">No typical uses listed.</p>';
+      }
+
+      // Where to buy
+      whereToBuyEl.innerHTML = "";
+      if (Array.isArray(where_to_buy) && where_to_buy.length > 0) {
+        const ul = document.createElement("ul");
+        where_to_buy.forEach(w => {
+          const li = document.createElement("li");
+          li.textContent = w;
+          ul.appendChild(li);
+        });
+        whereToBuyEl.appendChild(ul);
+      } else {
+        whereToBuyEl.innerHTML =
+          '<p class="placeholder">No buying sources listed.</p>';
+      }
+
+      // Key specs
+      keySpecsEl.innerHTML = "";
+      if (Array.isArray(key_specs) && key_specs.length > 0) {
+        const ul = document.createElement("ul");
+        key_specs.forEach(s => {
+          const li = document.createElement("li");
+          li.textContent = s;
+          ul.appendChild(li);
+        });
+        keySpecsEl.appendChild(ul);
+      } else {
+        keySpecsEl.innerHTML =
+          '<p class="placeholder">No key specs listed.</p>';
+      }
+
+      // Datasheet hint
+      datasheetHintEl.innerHTML = "";
+      const dh = document.createElement("p");
+      dh.textContent =
+        datasheet_hint ||
+        "Search for the device name + 'datasheet' in your browser.";
+      datasheetHintEl.appendChild(dh);
+
+      // Reference image from Google (real_image URL)
+      if (real_image) {
+        refImageEl.src = real_image;
+        refImageEl.style.display = "block";
+      } else {
+        refImageEl.src = "";
+        refImageEl.style.display = "none";
+      }
+    }
+
+    // ----- History -----
+    function addToHistory(result, queryText) {
+      const item = document.createElement("div");
+      item.className = "history-item";
+
+      const t = document.createElement("div");
+      t.className = "time";
+      t.textContent = new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit"
+      });
+
+      const s = document.createElement("div");
+      s.className = "summary";
+      const base = result.name || "Unknown device";
+      const modeInfo = queryText
+        ? ` (search: ${queryText.slice(0, 35)}${queryText.length > 35 ? "…" : ""})`
+        : "";
+      s.textContent = base + modeInfo;
+
+      item.appendChild(t);
+      item.appendChild(s);
+      historyEl.insertBefore(item, historyEl.firstChild);
+    }
+
+    // Try to auto-start camera on load
+    window.addEventListener("load", () => {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        cameraStatusText.textContent = "Requesting camera access…";
+        startCamera();
+      } else {
+        cameraStatusText.textContent = "Camera not supported on this device.";
+      }
+    });
+  </script>
+</body>
+</html>
