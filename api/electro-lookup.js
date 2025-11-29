@@ -1,9 +1,15 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import fetch from "node-fetch";
 
 /**
- * Helper to read JSON body from Node request (Vercel Node runtime).
+ * Safely get JSON body from the request.
+ * Vercel often provides req.body already parsed; if not, we fall back to manual parsing.
  */
-async function readJsonBody(req) {
+async function getJsonBody(req) {
+  if (req.body && typeof req.body === "object") {
+    return req.body;
+  }
+
   return await new Promise((resolve, reject) => {
     let data = "";
     req.on("data", chunk => {
@@ -22,7 +28,7 @@ async function readJsonBody(req) {
 }
 
 /**
- * Helper: strip data URL prefix and return { mimeType, base64 }
+ * Strip data URL prefix and return { mimeType, base64 }
  */
 function extractBase64FromDataUrl(dataUrl) {
   if (!dataUrl || typeof dataUrl !== "string") return null;
@@ -32,10 +38,10 @@ function extractBase64FromDataUrl(dataUrl) {
 }
 
 /**
- * Fetch a real image URL for the identified device using Google Custom Search.
- * Uses env vars:
- *   CSE_API_KEY  = Custom Search JSON API key
- *   CSE_CX       = Search Engine ID
+ * Use Google Custom Search to fetch a real image URL.
+ * Requires env vars:
+ *   CSE_API_KEY = Custom Search JSON key
+ *   CSE_CX      = Search Engine ID
  */
 async function fetchRealImageFromGoogle(query) {
   const apiKey = process.env.CSE_API_KEY;
@@ -76,14 +82,21 @@ async function fetchRealImageFromGoogle(query) {
 }
 
 export default async function handler(req, res) {
-  // Only allow POST
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return res.status(405).json({ error: "Method not allowed" });
   }
 
   try {
-    const body = await readJsonBody(req);
+    // ---- Read body ----
+    let body;
+    try {
+      body = await getJsonBody(req);
+    } catch (e) {
+      console.error("❌ Failed to parse JSON body:", e);
+      return res.status(400).json({ error: "Invalid JSON body" });
+    }
+
     const { image, queryText } = body || {};
 
     if (!image && !queryText) {
@@ -92,10 +105,13 @@ export default async function handler(req, res) {
       });
     }
 
+    // ---- Gemini setup ----
     const apiKey = process.env.GOOGLE_API_KEY;
     if (!apiKey) {
-      console.error("❌ GOOGLE_API_KEY missing");
-      return res.status(500).json({ error: "Server misconfigured." });
+      console.error("❌ GOOGLE_API_KEY missing in environment");
+      return res
+        .status(500)
+        .json({ error: "Server misconfigured: GOOGLE_API_KEY is missing." });
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
@@ -166,18 +182,29 @@ and briefly explain that it's outside electronics.
       });
     }
 
-    const geminiResult = await model.generateContent({
-      contents: [{ role: "user", parts }],
-      generationConfig: { responseMimeType: "application/json" }
-    });
+    // ---- Call Gemini ----
+    let geminiResult;
+    try {
+      geminiResult = await model.generateContent({
+        contents: [{ role: "user", parts }],
+        generationConfig: { responseMimeType: "application/json" }
+      });
+    } catch (e) {
+      console.error("❌ Gemini generateContent error:", e);
+      return res.status(500).json({ error: "Gemini API request failed." });
+    }
 
-    const text = geminiResult.response.text();
+    const text = geminiResult?.response?.text?.();
+    if (!text) {
+      console.error("❌ Gemini returned empty response:", geminiResult);
+      return res.status(500).json({ error: "Empty response from Gemini." });
+    }
 
     let parsed;
     try {
       parsed = JSON.parse(text);
     } catch (e) {
-      console.error("Failed to parse JSON from Gemini:", text);
+      console.error("❌ Failed to parse JSON from Gemini:", text);
       return res.status(500).json({ error: "Failed to parse AI response from Gemini." });
     }
 
@@ -193,13 +220,13 @@ and briefly explain that it's outside electronics.
         "Search for the device name + 'datasheet' on your preferred search engine."
     };
 
-    // Attach real Google image
+    // ---- Attach real Google image ----
     const realImageUrl = await fetchRealImageFromGoogle(result.name);
     result.real_image = realImageUrl || null;
 
     return res.status(200).json(result);
   } catch (err) {
-    console.error("Error in /api/electro-lookup:", err);
-    return res.status(500).json({ error: "Gemini AI request failed." });
+    console.error("❌ Unexpected error in /api/electro-lookup:", err);
+    return res.status(500).json({ error: "Internal server error." });
   }
 }
