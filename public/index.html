@@ -565,6 +565,32 @@
     .datasheet-link:hover {
       background:rgba(30,64,175,0.45);
     }
+
+    /* web search buttons */
+    .web-links-row {
+      display:flex;
+      flex-wrap:wrap;
+      gap:6px;
+      margin-top:4px;
+    }
+
+    .web-link-btn {
+      border-radius:999px;
+      border:1px solid rgba(148,163,184,0.6);
+      padding:4px 9px;
+      font-size:11px;
+      background:rgba(15,23,42,1);
+      color:#cbd5f5;
+      text-decoration:none;
+      display:inline-flex;
+      align-items:center;
+      gap:4px;
+    }
+
+    .web-link-btn:hover {
+      border-color:var(--accent);
+      color:white;
+    }
   </style>
 </head>
 <body>
@@ -580,7 +606,7 @@
         <p class="subtext">
           Use your camera, upload a photo, or type the name of a component.
           ElectroLens mixes AI with web search to act like an electronics encyclopedia:
-          description, specs, where to buy, and datasheet links.
+          description, specs, project ideas, warnings, and datasheet links.
         </p>
 
         <div class="mode-tabs">
@@ -742,6 +768,20 @@
         </div>
 
         <div class="section">
+          <div class="section-title">Project Ideas</div>
+          <div class="section-content" id="projectIdeas">
+            <p class="placeholder">Simple project ideas using this component will appear here.</p>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Common Mistakes & Warnings</div>
+          <div class="section-content" id="commonMistakes">
+            <p class="placeholder">Typical pitfalls and safety notes will appear here.</p>
+          </div>
+        </div>
+
+        <div class="section">
           <div class="section-title">Datasheet Hint</div>
           <div class="section-content" id="datasheetHint">
             <p class="placeholder">ElectroLens will suggest a search phrase to quickly find the datasheet.</p>
@@ -753,6 +793,15 @@
           <div class="section-content" id="referencesSection">
             <p class="placeholder">
               When available, a likely official datasheet and a few reference pages will appear here.
+            </p>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">More on the Web</div>
+          <div class="section-content" id="webLinks">
+            <p class="placeholder">
+              Quick Google search shortcuts (circuits, pinouts, prices) will show here after analysis.
             </p>
           </div>
         </div>
@@ -810,8 +859,11 @@
     const typicalUsesEl = document.getElementById("typicalUses");
     const whereToBuyEl = document.getElementById("whereToBuy");
     const keySpecsEl = document.getElementById("keySpecs");
+    const projectIdeasEl = document.getElementById("projectIdeas");
+    const commonMistakesEl = document.getElementById("commonMistakes");
     const datasheetHintEl = document.getElementById("datasheetHint");
     const referencesEl = document.getElementById("referencesSection");
+    const webLinksEl = document.getElementById("webLinks");
     const refImageEl = document.getElementById("refImage");
     const aiStatusText = document.getElementById("aiStatusText");
     const historyEl = document.getElementById("history");
@@ -992,8 +1044,17 @@
         datasheet_hint,
         real_image,
         datasheet_url,
-        references
+        references,
+        project_ideas,
+        common_mistakes
       } = result;
+
+      const searchTerm =
+        name && name !== "Unknown device"
+          ? name
+          : queryText && queryText.trim().length > 0
+          ? queryText.trim()
+          : "";
 
       deviceNameEl.textContent = name || "Unknown device";
       deviceCategoryEl.textContent = category || "Other";
@@ -1049,6 +1110,36 @@
           '<p class="placeholder">No key specs listed.</p>';
       }
 
+      // Project ideas
+      projectIdeasEl.innerHTML = "";
+      if (Array.isArray(project_ideas) && project_ideas.length > 0) {
+        const ul = document.createElement("ul");
+        project_ideas.forEach(idea => {
+          const li = document.createElement("li");
+          li.textContent = idea;
+          ul.appendChild(li);
+        });
+        projectIdeasEl.appendChild(ul);
+      } else {
+        projectIdeasEl.innerHTML =
+          '<p class="placeholder">No project ideas generated.</p>';
+      }
+
+      // Common mistakes
+      commonMistakesEl.innerHTML = "";
+      if (Array.isArray(common_mistakes) && common_mistakes.length > 0) {
+        const ul = document.createElement("ul");
+        common_mistakes.forEach(m => {
+          const li = document.createElement("li");
+          li.textContent = m;
+          ul.appendChild(li);
+        });
+        commonMistakesEl.appendChild(ul);
+      } else {
+        commonMistakesEl.innerHTML =
+          '<p class="placeholder">No common mistakes listed.</p>';
+      }
+
       // Datasheet hint
       datasheetHintEl.innerHTML = "";
       const dh = document.createElement("p");
@@ -1093,6 +1184,54 @@
       } else if (!datasheet_url) {
         referencesEl.innerHTML =
           '<p class="placeholder">No external references found.</p>';
+      }
+
+      // Smart Google buttons
+      webLinksEl.innerHTML = "";
+      if (searchTerm) {
+        const row = document.createElement("div");
+        row.className = "web-links-row";
+
+        const mkBtn = (label, url, emoji) => {
+          const a = document.createElement("a");
+          a.href = url;
+          a.target = "_blank";
+          a.rel = "noopener noreferrer";
+          a.className = "web-link-btn";
+          a.innerHTML = `${emoji} ${label}`;
+          return a;
+        };
+
+        const qCircuit = encodeURIComponent(searchTerm + " application circuit");
+        const qPinout = encodeURIComponent(searchTerm + " pinout");
+        const qPrice = encodeURIComponent(searchTerm + " price Philippines");
+
+        row.appendChild(
+          mkBtn(
+            "Circuit examples",
+            `https://www.google.com/search?q=${qCircuit}`,
+            "🧩"
+          )
+        );
+        row.appendChild(
+          mkBtn(
+            "Pinout images",
+            `https://www.google.com/search?tbm=isch&q=${qPinout}`,
+            "📷"
+          )
+        );
+        row.appendChild(
+          mkBtn(
+            "Prices",
+            `https://www.google.com/search?q=${qPrice}`,
+            "🛒"
+          )
+        );
+
+        webLinksEl.appendChild(row);
+      } else {
+        webLinksEl.innerHTML =
+          '<p class="placeholder">Search again with a clearer name to get web shortcuts.</p>';
       }
 
       // Reference image from Google (real_image URL)

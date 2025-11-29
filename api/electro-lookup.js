@@ -93,7 +93,6 @@ async function fetchDatasheetAndReferences(query) {
     for (const item of items) {
       if (!item.link) continue;
 
-      // Heuristic: prefer PDF or obvious manufacturer domains for datasheet
       const link = item.link;
       const mime = item.mime || "";
       const display = (item.displayLink || "").toLowerCase();
@@ -189,6 +188,8 @@ Write your answer as if it were an encyclopedia entry:
 - In "key_specs", list concrete, realistic numbers when commonly known
   (voltage ranges, current, package, frequency, tolerance, memory size, etc.).
 - In "typical_uses", focus on real-world circuits, boards, and applications.
+- In "project_ideas", suggest 3–5 simple project ideas (student level) that use this part.
+- In "common_mistakes", list 3–5 common mistakes / pitfalls / warnings when using this part.
 
 Respond ONLY with a JSON object in this exact format:
 
@@ -205,7 +206,15 @@ Respond ONLY with a JSON object in this exact format:
   "key_specs": [
     "Important specs or parameters (voltage ratings, current, power, tolerance, package, frequency, memory size, etc.) if identifiable. If unsure, be honest."
   ],
-  "datasheet_hint": "Short instruction on what to search on Google to find its datasheet. Include an example search query."
+  "datasheet_hint": "Short instruction on what to search on Google to find its datasheet. Include an example search query.",
+  "project_ideas": [
+    "Short project idea 1",
+    "Short project idea 2"
+  ],
+  "common_mistakes": [
+    "Common mistake or warning 1",
+    "Common mistake or warning 2"
+  ]
 }
 
 RULES:
@@ -259,7 +268,11 @@ and briefly explain that it's outside electronics.
       key_specs: Array.isArray(parsed.key_specs) ? parsed.key_specs : [],
       datasheet_hint:
         parsed.datasheet_hint ||
-        "Search for the device name + 'datasheet' on your preferred search engine."
+        "Search for the device name + 'datasheet' on your preferred search engine.",
+      project_ideas: Array.isArray(parsed.project_ideas) ? parsed.project_ideas : [],
+      common_mistakes: Array.isArray(parsed.common_mistakes)
+        ? parsed.common_mistakes
+        : []
     };
 
     // Attach real Google image
