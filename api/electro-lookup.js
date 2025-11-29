@@ -32,14 +32,21 @@ function extractBase64FromDataUrl(dataUrl) {
 }
 
 /**
- * Get a real image URL for the identified device using Google Custom Search.
+ * Fetch a real image URL for the identified device using Google Custom Search.
+ * Uses env vars:
+ *   CSE_API_KEY  = Custom Search JSON API key
+ *   CSE_CX       = Search Engine ID
  */
 async function fetchRealImageFromGoogle(query) {
   const apiKey = process.env.CSE_API_KEY;
   const cx = process.env.CSE_CX;
 
   if (!apiKey || !cx || !query) {
-    console.log("⚠️ Missing CSE config or query, skipping image search.");
+    console.log("⚠️ Missing CSE config or query, skipping image search.", {
+      hasApiKey: !!apiKey,
+      hasCx: !!cx,
+      query
+    });
     return null;
   }
 
@@ -50,22 +57,23 @@ async function fetchRealImageFromGoogle(query) {
   try {
     const res = await fetch(url);
     if (!res.ok) {
-      console.log("⚠️ Google image search HTTP error:", res.status, await res.text());
+      const text = await res.text();
+      console.log("⚠️ Google image search HTTP error:", res.status, text);
       return null;
     }
     const data = await res.json();
     if (data.items && data.items.length > 0) {
-      console.log("✅ Got image for", query, "→", data.items[0].link);
-      return data.items[0].link;
+      const link = data.items[0].link;
+      console.log("✅ Got image for", query, "→", link);
+      return link;
     } else {
-      console.log("⚠️ No image items returned for", query);
+      console.log("⚠️ No image items returned for", query, "full response:", data);
     }
   } catch (err) {
     console.error("Google Image Search error:", err);
   }
   return null;
 }
-
 
 export default async function handler(req, res) {
   // Only allow POST
@@ -86,7 +94,7 @@ export default async function handler(req, res) {
 
     const apiKey = process.env.GOOGLE_API_KEY;
     if (!apiKey) {
-      console.error("GOOGLE_API_KEY missing");
+      console.error("❌ GOOGLE_API_KEY missing");
       return res.status(500).json({ error: "Server misconfigured." });
     }
 
@@ -138,7 +146,7 @@ RULES:
   "name": "Not an electronics-focused object",
   "category": "Other"
 and briefly explain that it's outside electronics.
-      `.trim()
+        `.trim()
       },
       { text: userText }
     ];
