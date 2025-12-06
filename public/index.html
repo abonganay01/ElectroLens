@@ -379,6 +379,24 @@
         border-color: rgba(15,23,42,0.6);
     }
 
+    /* FIX: Force video and image to fill the container exactly */
+    .glass-frame video, 
+    #cameraCapturePreview {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+
+    /* FIX: Absolute positioning for the capture preview to overlay the video */
+    #cameraCapturePreview {
+        position: absolute;
+        top: 0;
+        left: 0;
+        z-index: 10;
+        display: none;
+    }
+
     .camera-status {
         position: absolute; /* Fix absolute positioning */
         left: 12px;
@@ -391,6 +409,7 @@
         display: flex; /* Flex to align loader and text */
         align-items: center;
         gap: 8px;
+        z-index: 20; /* Ensure status is above image */
     }
 
     :root[data-theme="light"] .camera-status {
