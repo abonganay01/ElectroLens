@@ -218,6 +218,16 @@
       max-height:320px;
     }
 
+    /* captured camera preview image overlay */
+    #cameraCapturePreview {
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      display:none;
+    }
+
     .camera-status {
       position:absolute;
       left:10px;
@@ -652,6 +662,8 @@
 
             <div class="glass-frame">
               <video id="camera" autoplay playsinline></video>
+              <!-- Captured still from the camera -->
+              <img id="cameraCapturePreview" alt="Captured frame" />
               <div class="camera-status">
                 <span class="status-dot" id="cameraDot"></span>
                 <span id="cameraStatusText">Waiting for permission…</span>
@@ -853,6 +865,7 @@
     };
 
     const video = document.getElementById("camera");
+    const cameraCapturePreview = document.getElementById("cameraCapturePreview");
     const analyzeCameraBtn = document.getElementById("analyzeCameraBtn");
     const toggleCameraBtn = document.getElementById("toggleCameraBtn");
     const toggleCameraText = document.getElementById("toggleCameraText");
@@ -946,6 +959,8 @@
       cameraStatusText.textContent = "Camera stopped";
       lensText.textContent = "idle";
       toggleCameraText.textContent = "Start camera";
+      // hide any captured overlay
+      cameraCapturePreview.style.display = "none";
     }
 
     toggleCameraBtn.addEventListener("click", () => {
@@ -958,7 +973,7 @@
       analyzing = true;
       analyzeCameraBtn.disabled = true;
 
-      // Show capture + loading feedback
+      // Capture current frame to canvas & data URL
       const width = video.videoWidth || 640;
       const height = video.videoHeight || 480;
       canvas.width = width;
@@ -967,18 +982,17 @@
       ctx.drawImage(video, 0, 0, width, height);
       const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
 
+      // Show captured still image overlay and status text
+      cameraCapturePreview.src = dataUrl;
+      cameraCapturePreview.style.display = "block";
       cameraStatusText.textContent = "Frame captured – analyzing…";
       lensText.textContent = "analyzing";
       aiStatusText.textContent = "Captured frame and asking ElectroLens…";
 
-      await queryElectroLens({ image: dataUrl, queryText: "" });
+      await queryElectroLens({ image: dataUrl, queryText: "" }, "camera");
 
       analyzing = false;
       analyzeCameraBtn.disabled = !cameraOn;
-      if (cameraOn) {
-        cameraStatusText.textContent = "Camera active";
-        lensText.textContent = "live";
-      }
     });
 
     // ----- Upload -----
@@ -1007,7 +1021,7 @@
       analyzeUploadBtn.disabled = true;
 
       aiStatusText.textContent = "Analyzing uploaded image…";
-      await queryElectroLens({ image: uploadImageDataUrl, queryText: "" });
+      await queryElectroLens({ image: uploadImageDataUrl, queryText: "" }, "upload");
 
       analyzing = false;
       analyzeUploadBtn.disabled = false;
@@ -1021,7 +1035,7 @@
       manualSearchBtn.disabled = true;
 
       aiStatusText.textContent = "Looking up this electronics item in ElectroLens…";
-      await queryElectroLens({ image: null, queryText: text });
+      await queryElectroLens({ image: null, queryText: text }, "manual");
 
       analyzing = false;
       manualSearchBtn.disabled = false;
@@ -1034,7 +1048,7 @@
     });
 
     // ----- Common API call -----
-    async function queryElectroLens({ image, queryText }) {
+    async function queryElectroLens(payload, source) {
       try {
         // show loading spinner
         globalLoaderEl.style.display = "inline-block";
@@ -1042,13 +1056,13 @@
         const res = await fetch("/api/electro-lookup", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ image, queryText })
+          body: JSON.stringify(payload)
         });
 
         if (!res.ok) throw new Error("Backend error");
         const json = await res.json();
-        renderResult(json, queryText);
-        addToHistory(json, queryText);
+        renderResult(json, payload.queryText || "");
+        addToHistory(json, payload.queryText || "");
         aiStatusText.textContent = "Done – analyze another component or tool.";
       } catch (err) {
         console.error(err);
@@ -1058,6 +1072,17 @@
       } finally {
         // hide loading spinner
         globalLoaderEl.style.display = "none";
+
+        // after AI + image search is done, restore camera view if we came from camera
+        if (source === "camera") {
+          if (cameraOn) {
+            cameraCapturePreview.style.display = "none"; // hide frozen frame
+            cameraStatusText.textContent = "Camera active";
+            lensText.textContent = "live";
+          } else {
+            cameraCapturePreview.style.display = "none";
+          }
+        }
       }
     }
 
