@@ -52,42 +52,74 @@ async function googleImageSearch(query) {
   }
 }
 
-// ========== Bing Image Search (fallback) ==========
+// ========== DuckDuckGo Image Search (fallback, no key) ==========
 
-async function bingImageSearch(query) {
-  const bingKey = process.env.BING_API_KEY;
-  if (!bingKey || !query) return null;
-
-  const url = `https://api.bing.microsoft.com/v7.0/images/search?q=${encodeURIComponent(
-    query
-  )}&safeSearch=Moderate`;
+async function duckduckgoImageSearch(query) {
+  if (!query) return null;
 
   try {
-    const res = await fetch(url, {
-      headers: { "Ocp-Apim-Subscription-Key": bingKey }
-    });
-    if (!res.ok) {
-      console.error("Image search HTTP error (Bing):", res.status);
+    // Step 1: get vqd token
+    const initRes = await fetch(
+      `https://duckduckgo.com/?q=${encodeURIComponent(
+        query
+      )}&iax=images&ia=images`,
+      {
+        headers: {
+          // Simple user-agent to avoid being blocked
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+      }
+    );
+
+    const html = await initRes.text();
+    const tokenMatch = html.match(/vqd=([\d-]+)/);
+    if (!tokenMatch) {
+      console.error("DuckDuckGo: vqd token not found");
       return null;
     }
-    const data = await res.json();
-    return data.value?.[0]?.contentUrl || null;
+
+    const vqd = tokenMatch[1];
+
+    // Step 2: fetch images JSON
+    const apiRes = await fetch(
+      `https://duckduckgo.com/i.js?l=us-en&o=json&q=${encodeURIComponent(
+        query
+      )}&vqd=${vqd}`,
+      {
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          Referer: "https://duckduckgo.com/"
+        }
+      }
+    );
+
+    if (!apiRes.ok) {
+      console.error("DuckDuckGo image HTTP error:", apiRes.status);
+      return null;
+    }
+
+    const data = await apiRes.json();
+    return data.results?.[0]?.image || null;
   } catch (err) {
-    console.error("Bing image search error:", err);
+    console.error("DuckDuckGo image search error:", err);
     return null;
   }
 }
 
-// unified helper: Google first, then Bing
+// unified helper: Google first, then DuckDuckGo
 async function smartImageSearch(query) {
   if (!query) return null;
 
-  // Try Google first
+  // Try Google CSE first
   let url = await googleImageSearch(query);
   if (url) return url;
 
-  console.warn("Google image search failed or quota exceeded – falling back to Bing.");
-  url = await bingImageSearch(query);
+  console.warn(
+    "Google image search failed or quota exceeded – falling back to DuckDuckGo."
+  );
+  url = await duckduckgoImageSearch(query);
   return url || null;
 }
 
@@ -131,7 +163,10 @@ async function fetchDatasheetAndReferences(name) {
 
     for (const item of data.items || []) {
       const link = item.link || "";
-      if (!datasheetUrl && (link.endsWith(".pdf") || link.toLowerCase().includes("datasheet"))) {
+      if (
+        !datasheetUrl &&
+        (link.endsWith(".pdf") || link.toLowerCase().includes("datasheet"))
+      ) {
         datasheetUrl = link;
       }
       if (references.length < 4) {
@@ -384,7 +419,7 @@ Return STRICT JSON ONLY in this shape:
       safeQueryText ||
       "electronics component";
 
-    // Images (Google first, Bing fallback via smartImageSearch)
+    // Images (Google first, DuckDuckGo fallback)
     baseJson.real_image = await fetchRealImageFromGoogle(nameOrQuery);
     baseJson.usage_image = await fetchUsageImageFromGoogle(nameOrQuery);
     baseJson.pinout_image = await fetchPinoutImageFromGoogle(nameOrQuery);
@@ -404,7 +439,7 @@ Return STRICT JSON ONLY in this shape:
     // Let Groq turn it into a full-blown encyclopedia entry
     const refined = await groqRefine(baseJson);
 
-    // 🔒 Preserve server-generated URLs & links even if Groq drops them
+    // Preserve server-generated URLs & links even if Groq drops them
     const finalJson = {
       ...refined,
       real_image: baseJson.real_image,
