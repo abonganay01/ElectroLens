@@ -250,9 +250,7 @@ export default async function handler(req, res) {
     const geminiKey = process.env.GOOGLE_API_KEY;
     if (!geminiKey) {
       console.error("Missing GOOGLE_API_KEY");
-      return res
-        .status(500)
-        .json({ error: "Server misconfigured: GOOGLE_API_KEY missing." });
+      return res.status(500).json({ error: "Server misconfigured: GOOGLE_API_KEY missing." });
     }
 
     const genAI = new GoogleGenerativeAI(geminiKey);
@@ -317,7 +315,7 @@ Return STRICT JSON ONLY in this shape:
         parts.push({ text: `User text label: "${queryText.trim()}"` });
       }
     } else {
-      parts.push({ text: `User typed query: "${(queryText || "").trim()}"` });
+      parts.push({ text: `User typed query: "${queryText.trim()}"` });
     }
 
     const geminiResp = await model.generateContent({
@@ -330,9 +328,7 @@ Return STRICT JSON ONLY in this shape:
       baseJson = JSON.parse(geminiResp.response.text());
     } catch (err) {
       console.error("Failed to parse Gemini JSON:", geminiResp.response.text());
-      return res
-        .status(500)
-        .json({ error: "Failed to parse Gemini response as JSON." });
+      return res.status(500).json({ error: "Failed to parse Gemini response as JSON." });
     }
 
     const nameOrQuery =
@@ -357,27 +353,17 @@ Return STRICT JSON ONLY in this shape:
     // Let Groq turn it into a full-blown encyclopedia entry
     const refined = await groqRefine(baseJson);
 
-    // 🔒 Preserve server-generated URLs & links even if Groq drops them
-    const finalJson = {
-      ...refined,
-      real_image: baseJson.real_image,
-      usage_image: baseJson.usage_image,
-      pinout_image: baseJson.pinout_image,
-      datasheet_url: baseJson.datasheet_url,
-      references: baseJson.references,
-      shop_links: baseJson.shop_links
-    };
+    // 🔒 NEW: make sure Groq can't accidentally drop the server-generated URLs
+    if (!refined.real_image) refined.real_image = baseJson.real_image;
+    if (!refined.usage_image) refined.usage_image = baseJson.usage_image;
+    if (!refined.pinout_image) refined.pinout_image = baseJson.pinout_image;
+    if (!refined.datasheet_url) refined.datasheet_url = baseJson.datasheet_url;
+    if (!refined.references) refined.references = baseJson.references;
+    if (!refined.shop_links) refined.shop_links = baseJson.shop_links;
 
-    // If you ever add official_store server-side, keep it unless Groq explicitly set one
-    if (baseJson.official_store && !finalJson.official_store) {
-      finalJson.official_store = baseJson.official_store;
-    }
-
-    return res.status(200).json(finalJson);
+    return res.status(200).json(refined);
   } catch (err) {
     console.error("Error in /api/electro-lookup:", err);
-    return res
-      .status(500)
-      .json({ error: "Internal server error in electro-lookup." });
+    return res.status(500).json({ error: "Internal server error in electro-lookup." });
   }
 }
