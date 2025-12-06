@@ -34,15 +34,14 @@ async function googleImageSearch(query) {
   const cx = process.env.CSE_CX;
   if (!apiKey || !cx || !query) return null;
 
-  // Added &imgSize=medium to ensure we get visible results that load fast
   const url = `https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(
     query
-  )}&searchType=image&imgSize=medium&num=1&safe=active&key=${apiKey}&cx=${cx}`;
+  )}&searchType=image&num=1&safe=active&key=${apiKey}&cx=${cx}`;
 
   try {
     const res = await fetch(url);
     if (!res.ok) {
-      console.error(`Image search HTTP error (${query}):`, res.status);
+      console.error("Image search HTTP error:", res.status);
       return null;
     }
     const data = await res.json();
@@ -59,7 +58,7 @@ async function fetchRealImageFromGoogle(nameOrQuery) {
 
 async function fetchUsageImageFromGoogle(nameOrQuery) {
   // try to get an application / example circuit image
-  const q = `${nameOrQuery} application circuit schematic wiring`;
+  const q = `${nameOrQuery} application circuit electronics example`;
   return googleImageSearch(q);
 }
 
@@ -77,7 +76,7 @@ async function fetchDatasheetAndReferences(name) {
   const query = `${name} datasheet pdf`;
   const url = `https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(
     query
-  )}&num=4&safe=active&key=${apiKey}&cx=${cx}`;
+  )}&num=5&safe=active&key=${apiKey}&cx=${cx}`;
 
   try {
     const res = await fetch(url);
@@ -90,15 +89,14 @@ async function fetchDatasheetAndReferences(name) {
     let datasheetUrl = null;
     const references = [];
 
-    for (const item of data.items || []) {
+    for (const item of (data.items || [])) {
       const link = item.link || "";
-      // Prioritize actual PDF links
-      if (!datasheetUrl && (link.endsWith(".pdf") || item.title.toLowerCase().includes("datasheet"))) {
+      if (!datasheetUrl && (link.endsWith(".pdf") || link.toLowerCase().includes("datasheet"))) {
         datasheetUrl = link;
       }
-      if (references.length < 3) {
+      if (references.length < 4) {
         references.push({
-          title: item.title || "Reference",
+          title: item.title || "",
           url: link,
           snippet: item.snippet || ""
         });
@@ -115,7 +113,7 @@ async function fetchDatasheetAndReferences(name) {
 // ========== Shop links ==========
 
 function generateShopLinks(nameOrQuery) {
-  const q = encodeURIComponent(nameOrQuery || "electronics");
+  const q = encodeURIComponent(nameOrQuery || "");
   return {
     shopee: `https://shopee.ph/search?keyword=${q}`,
     lazada: `https://www.lazada.com.ph/tag/${q}/`,
@@ -136,35 +134,77 @@ async function groqRefine(baseJson) {
   const systemPrompt = `
 You are ElectroLens PRO, an engineering-grade electronics encyclopedia AI.
 
-You receive a JSON object describing an electronics component.
-Your job is to REWRITE and ENRICH the text fields with very complete, realistic information.
+You receive a JSON object describing an electronics component, module, or tool.
+Your job is to REWRITE and ENRICH that JSON with very complete, realistic information,
+while keeping the SAME keys that already exist. Do not rename keys.
 
-IMPORTANT: 
-- Return the EXACT SAME JSON STRUCTURE.
-- DO NOT change the "real_image", "usage_image", or "pinout_image" URLs. Keep them exactly as is.
-- If the description is thin, expand it significantly.
+For each field:
 
-Fields to enrich:
-- "name": Standardize the name.
-- "category": Keep it accurate.
-- "description": 3-5 paragraphs, detailed engineering context.
-- "typical_uses": Concrete examples.
-- "where_to_buy": Common vendors.
-- "key_specs": Real world numbers (voltages, pin counts, protocols).
-- "project_ideas": Specific project concepts.
-- "common_mistakes": Technical gotchas.
-- "datasheet_hint": Best Google search term.
+- "name":
+  • Keep it short but specific.
+  • Include common designation if obvious (e.g. "ESP32 DevKit board", "LM7805 linear regulator TO-220").
+  • Do not invent fake part numbers.
 
-Return ONLY valid JSON.
+- "category":
+  • Keep a broad label: "Component", "Microcontroller", "Module", "Tool", "Test Equipment", "Power Supply", "Other".
+
+- "description":
+  • Write 3–6 detailed paragraphs.
+  • Cover:
+    1) What type of device this is and its role in electronics.
+    2) High-level principle of operation.
+    3) Typical electrical characteristics (voltages, currents, logic levels, etc.).
+    4) Common uses in real circuits or lab setups.
+    5) Important limitations and design caveats (e.g. heat, noise, accuracy, switching limits).
+
+- "typical_uses":
+  • Provide 4–8 bullet points.
+  • Each bullet should be a real, concrete application.
+
+- "where_to_buy":
+  • Provide 4–8 bullet points.
+  • Include generic local shops, online marketplaces (Shopee, Lazada, Amazon, AliExpress),
+    and professional distributors (Mouser, Digi-Key, RS, element14) where reasonable.
+
+- "key_specs":
+  • Provide 6–12 bullet points.
+  • Include key voltages, currents, power ratings, tolerances, package type, input/output behavior, frequency range, etc.
+  • If exact values are unknown, use typical ranges and clearly say "typically" or "commonly".
+
+- "project_ideas":
+  • Provide 3–6 student-friendly projects.
+  • Explain how this component is used in each project.
+
+- "common_mistakes":
+  • Provide 5–10 realistic mistakes and warnings.
+  • Mention why they are problems (overheating, incorrect biasing, wrong supply voltage, missing flyback diode, etc.).
+
+- "datasheet_hint":
+  • Give ONE realistic search string the user can paste into Google to find the official datasheet.
+  • Example: "ESP32-WROOM-32 datasheet PDF espressif" or "LM7805 TO-220 voltage regulator datasheet".
+
+Image-related keys:
+- "real_image", "usage_image", "pinout_image", "datasheet_url", "shop_links", "references":
+  • DO NOT modify or overwrite URLs. They are provided by the server.
+  • You may assume they are valid links to images or pages.
+
+- "official_store":
+  • If you recognize a likely manufacturer (Espressif, Texas Instruments, STMicroelectronics, etc.),
+    you may set or refine this as their main official website or product page URL.
+  • If you are not sure, leave it as is.
+
+GENERAL:
+- Do not contradict clear information already in the JSON.
+- Never claim impossible or absurd electrical values.
+- Return ONLY a valid JSON object. No markdown, no extra commentary, no code fences.
 `;
 
   const body = {
     model: "mixtral-8x7b-32768",
     messages: [
       { role: "system", content: systemPrompt },
-      { role: "user", content: JSON.stringify(baseJson) }
-    ],
-    temperature: 0.3
+      { role: "user", content: JSON.stringify(baseJson, null, 2) }
+    ]
   };
 
   try {
@@ -177,24 +217,17 @@ Return ONLY valid JSON.
       body: JSON.stringify(body)
     });
 
-    if (!res.ok) {
-        console.error("Groq API error:", res.status);
-        return baseJson;
-    }
-
     const data = await res.json();
     const text = data?.choices?.[0]?.message?.content;
-    
-    // Extract JSON from potential markdown blocks
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-        return JSON.parse(jsonMatch[0]);
-    } else {
-        return JSON.parse(text);
+    if (!text) {
+      console.log("⚠️ Groq empty content, falling back to baseJson.");
+      return baseJson;
     }
+
+    return JSON.parse(text);
   } catch (err) {
     console.error("Groq refinement failed:", err);
-    return baseJson; // Fallback to Gemini base data on error
+    return baseJson;
   }
 }
 
@@ -217,35 +250,55 @@ export default async function handler(req, res) {
     const geminiKey = process.env.GOOGLE_API_KEY;
     if (!geminiKey) {
       console.error("Missing GOOGLE_API_KEY");
-      return res.status(500).json({ error: "Server misconfigured: GOOGLE_API_KEY missing." });
+      return res
+        .status(500)
+        .json({ error: "Server misconfigured: GOOGLE_API_KEY missing." });
     }
 
     const genAI = new GoogleGenerativeAI(geminiKey);
-    // Using 1.5 flash or pro is often better for vision, but keeping requested model
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const basePrompt = `
-You are ElectroLens, an electronics component identifier.
-Identify the object in the image or query.
+You are ElectroLens, an assistant specialized ONLY in electronics-related items.
 
-Return strict JSON:
+FOCUS ONLY on:
+- Electronic components (resistors, capacitors, diodes, transistors, ICs, regulators, etc.)
+- Microcontrollers / dev boards (ESP32, Arduino, STM32, etc.)
+- Modules (sensor modules, relay modules, power modules, communication modules, etc.)
+- Test equipment (multimeters, oscilloscopes, power supplies, etc.)
+- Common electronics tools (soldering iron, breadboard, jumper wires, etc.)
+- Consumer electronics devices (if clearly visible) but described from an electronics engineering perspective.
+
+If the object is NOT electronics-related, treat it as "Other" and explain briefly.
+
+Return STRICT JSON ONLY in this shape:
+
 {
-  "name": "Component Name",
-  "category": "Component Category",
-  "description": "Brief description",
-  "typical_uses": ["Use 1", "Use 2"],
-  "where_to_buy": ["Store 1"],
-  "key_specs": ["Spec 1"],
-  "datasheet_hint": "Search query for datasheet",
-  "project_ideas": ["Project 1"],
-  "common_mistakes": ["Mistake 1"],
-  "image_search_query": "Specific search query for Google Images"
+  "name": "",
+  "category": "",
+  "description": "",
+  "typical_uses": [],
+  "where_to_buy": [],
+  "key_specs": [],
+  "datasheet_hint": "",
+  "project_ideas": [],
+  "common_mistakes": [],
+  "image_search_query": ""
 }
 
-"image_search_query" is CRITICAL. It should be the most precise name of the component to find a clean photo (e.g. 'ESP32 DevKit V1', 'Arduino Uno R3', 'LM7805 voltage regulator').
+- "name": short and specific.
+- "category": one of "Component", "Microcontroller", "Module", "Tool", "Test Equipment", "Power Supply", "Other".
+- "description": 1–3 paragraphs (base version, will be expanded later).
+- "typical_uses": 2–5 short bullet ideas.
+- "where_to_buy": 2–5 bullet ideas.
+- "key_specs": 3–8 bullet specs.
+- "datasheet_hint": what to search on Google to find the datasheet.
+- "project_ideas": 2–4 very short project ideas.
+- "common_mistakes": 3–6 short mistakes.
+- "image_search_query": the best search phrase to find images of this exact device (e.g. "ESP32 DevKitC board", "LM7805 TO-220").
 `;
 
-    const parts = [{ text: basePrompt }];
+    const parts: any[] = [{ text: basePrompt }];
 
     if (image) {
       const extracted = extractBase64FromDataUrl(image);
@@ -264,7 +317,7 @@ Return strict JSON:
         parts.push({ text: `User text label: "${queryText.trim()}"` });
       }
     } else {
-      parts.push({ text: `User typed query: "${queryText.trim()}"` });
+      parts.push({ text: `User typed query: "${(queryText || "").trim()}"` });
     }
 
     const geminiResp = await model.generateContent({
@@ -277,54 +330,54 @@ Return strict JSON:
       baseJson = JSON.parse(geminiResp.response.text());
     } catch (err) {
       console.error("Failed to parse Gemini JSON:", geminiResp.response.text());
-      return res.status(500).json({ error: "Failed to parse Gemini response as JSON." });
+      return res
+        .status(500)
+        .json({ error: "Failed to parse Gemini response as JSON." });
     }
 
-    // --- LOGIC UPDATE: Better Search Query Construction ---
     const nameOrQuery =
-      (baseJson.image_search_query && baseJson.image_search_query.length > 2)
-        ? baseJson.image_search_query
-        : (baseJson.name || queryText || "electronics component");
+      baseJson.image_search_query ||
+      baseJson.name ||
+      queryText ||
+      "electronics component";
 
-    console.log(`Searching images for: ${nameOrQuery}`);
+    // Images from Google
+    baseJson.real_image = await fetchRealImageFromGoogle(nameOrQuery);
+    baseJson.usage_image = await fetchUsageImageFromGoogle(nameOrQuery);
+    baseJson.pinout_image = await fetchPinoutImageFromGoogle(nameOrQuery);
 
-    // --- FETCH IMAGES ---
-    // We execute these in parallel for speed
-    const [realImage, usageImage, pinoutImage, dsData] = await Promise.all([
-        fetchRealImageFromGoogle(nameOrQuery),
-        fetchUsageImageFromGoogle(nameOrQuery),
-        fetchPinoutImageFromGoogle(nameOrQuery),
-        fetchDatasheetAndReferences(baseJson.name || queryText)
-    ]);
+    // Datasheet + references
+    const ds = await fetchDatasheetAndReferences(baseJson.name || queryText || "");
+    baseJson.datasheet_url = ds.datasheetUrl;
+    baseJson.references = ds.references;
 
-    // Attach to baseJson
-    baseJson.real_image = realImage;
-    baseJson.usage_image = usageImage;
-    baseJson.pinout_image = pinoutImage;
-    baseJson.datasheet_url = dsData.datasheetUrl;
-    baseJson.references = dsData.references;
-    baseJson.shop_links = generateShopLinks(baseJson.name);
+    // Shop links
+    baseJson.shop_links = generateShopLinks(baseJson.name || queryText || "electronics");
 
-    // --- REFINE WITH GROQ ---
-    let refinedJson = await groqRefine(baseJson);
+    // Let Groq turn it into a full-blown encyclopedia entry
+    const refined = await groqRefine(baseJson);
 
-    // --- CRITICAL FIX: RESTORE IMAGES ---
-    // Sometimes LLMs hallucinates empty strings or nulls for fields it can't "see".
-    // We explicitly overwrite the URL fields with the ones we fetched from Google above.
-    refinedJson.real_image = baseJson.real_image;
-    refinedJson.usage_image = baseJson.usage_image;
-    refinedJson.pinout_image = baseJson.pinout_image;
-    refinedJson.datasheet_url = baseJson.datasheet_url;
-    refinedJson.references = baseJson.references;
-    refinedJson.shop_links = baseJson.shop_links;
-    
-    // Ensure the frontend search fallback works by passing the query back
-    refinedJson.image_search_query = nameOrQuery; 
+    // 🔒 Preserve server-generated URLs & links even if Groq drops them
+    const finalJson = {
+      ...refined,
+      real_image: baseJson.real_image,
+      usage_image: baseJson.usage_image,
+      pinout_image: baseJson.pinout_image,
+      datasheet_url: baseJson.datasheet_url,
+      references: baseJson.references,
+      shop_links: baseJson.shop_links
+    };
 
-    return res.status(200).json(refinedJson);
+    // If you ever add official_store server-side, keep it unless Groq explicitly set one
+    if (baseJson.official_store && !finalJson.official_store) {
+      finalJson.official_store = baseJson.official_store;
+    }
 
+    return res.status(200).json(finalJson);
   } catch (err) {
     console.error("Error in /api/electro-lookup:", err);
-    return res.status(500).json({ error: "Internal server error in electro-lookup." });
+    return res
+      .status(500)
+      .json({ error: "Internal server error in electro-lookup." });
   }
 }
