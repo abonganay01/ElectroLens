@@ -33,6 +33,8 @@ function extractBase64FromDataUrl(dataUrl) {
 
 /**
  * Get a real image URL for the identified device using Google Custom Search.
+ * We try to use an "image_search_query" that describes how it visually looks
+ * so the returned image is as similar as possible to the captured photo.
  */
 async function fetchRealImageFromGoogle(query) {
   const apiKey = process.env.CSE_API_KEY;
@@ -42,7 +44,7 @@ async function fetchRealImageFromGoogle(query) {
 
   const url = `https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(
     query
-  )}&searchType=image&num=1&safe=active&key=${apiKey}&cx=${cx}`;
+  )}&searchType=image&imgType=photo&num=1&safe=active&key=${apiKey}&cx=${cx}`;
 
   try {
     const res = await fetch(url);
@@ -191,6 +193,15 @@ Write your answer as if it were an encyclopedia entry:
 - In "project_ideas", suggest 3–5 simple project ideas (student level) that use this part.
 - In "common_mistakes", list 3–5 common mistakes / pitfalls / warnings when using this part.
 
+ADDITIONAL IMPORTANT FIELD:
+- "image_search_query": a short, concrete phrase optimized for Google Image Search,
+   describing how the object visually looks in this photo (color, view/angle, form factor, package):
+   Examples:
+   - "top view of blue ESP32 devkit board with usb port on left"
+   - "front photo of yellow digital multimeter with rotary selector in the center"
+   - "closeup of small green LM7805 linear regulator on breadboard"
+   This should be focused on *visual* similarity, not datasheets. Do NOT include words like "datasheet".
+
 Respond ONLY with a JSON object in this exact format:
 
 {
@@ -214,7 +225,8 @@ Respond ONLY with a JSON object in this exact format:
   "common_mistakes": [
     "Common mistake or warning 1",
     "Common mistake or warning 2"
-  ]
+  ],
+  "image_search_query": "Short phrase for Google Images that will find a photo visually similar to this object."
 }
 
 RULES:
@@ -259,6 +271,11 @@ and briefly explain that it's outside electronics.
       return res.status(500).json({ error: "Failed to parse AI response from Gemini." });
     }
 
+    const imageSearchQuery =
+      typeof parsed.image_search_query === "string"
+        ? parsed.image_search_query.trim()
+        : "";
+
     const result = {
       name: parsed.name || "Unknown device",
       category: parsed.category || "Other",
@@ -272,14 +289,18 @@ and briefly explain that it's outside electronics.
       project_ideas: Array.isArray(parsed.project_ideas) ? parsed.project_ideas : [],
       common_mistakes: Array.isArray(parsed.common_mistakes)
         ? parsed.common_mistakes
-        : []
+        : [],
+      image_search_query: imageSearchQuery || null
     };
 
-    // Attach real Google image
-    const realImageUrl = await fetchRealImageFromGoogle(result.name);
+    // Choose the best query for image search: visual phrase > name
+    const queryForImage = imageSearchQuery || result.name;
+
+    // Attach real Google image (aiming to look visually similar to captured image)
+    const realImageUrl = await fetchRealImageFromGoogle(queryForImage);
     result.real_image = realImageUrl || null;
 
-    // Attach datasheet URL + reference links
+    // Attach datasheet URL + reference links (use name, which is better for datasheets)
     const { datasheetUrl, references } = await fetchDatasheetAndReferences(
       result.name
     );
