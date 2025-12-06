@@ -1,121 +1,75 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import fetch from "node-fetch";
 
-/**
- * Helper to read JSON body from Node request (Vercel Node runtime).
- */
+// -----------------------
+// Helper: Read JSON body
+// -----------------------
 async function readJsonBody(req) {
   return await new Promise((resolve, reject) => {
     let data = "";
-    req.on("data", chunk => {
-      data += chunk;
-    });
+    req.on("data", chunk => (data += chunk));
     req.on("end", () => {
       try {
-        const json = data ? JSON.parse(data) : {};
-        resolve(json);
+        resolve(data ? JSON.parse(data) : {});
       } catch (err) {
         reject(err);
       }
     });
-    req.on("error", reject);
   });
 }
 
-/**
- * Helper: strip data URL prefix and return { mimeType, base64 }
- */
+// ------------------------------
+// Helper: Convert Data URL
+// ------------------------------
 function extractBase64FromDataUrl(dataUrl) {
-  if (!dataUrl || typeof dataUrl !== "string") return null;
+  if (!dataUrl?.startsWith("data:")) return null;
   const match = dataUrl.match(/^data:(.+);base64,(.*)$/);
-  if (!match) return null;
-  return { mimeType: match[1], base64: match[2] };
+  return match ? { mimeType: match[1], base64: match[2] } : null;
 }
 
-/**
- * Get a real image URL for the identified device using Google Custom Search.
- */
+// ------------------------------
+// Google: Similar Photo Search
+// ------------------------------
 async function fetchRealImageFromGoogle(query) {
   const apiKey = process.env.CSE_API_KEY;
   const cx = process.env.CSE_CX;
+  if (!apiKey || !cx) return null;
 
-  if (!apiKey || !cx || !query) return null;
-
-  const url = `https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(
-    query
-  )}&searchType=image&num=1&safe=active&key=${apiKey}&cx=${cx}`;
+  const url = `https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(query)}&searchType=image&imgType=photo&num=1&safe=active&key=${apiKey}&cx=${cx}`;
 
   try {
     const res = await fetch(url);
-    if (!res.ok) {
-      console.log("⚠️ Image search HTTP error:", res.status, await res.text());
-      return null;
-    }
     const data = await res.json();
-    if (data.items && data.items.length > 0) {
-      return data.items[0].link; // real image URL
-    }
-  } catch (err) {
-    console.error("Google Image Search error:", err);
+    return data.items?.[0]?.link || null;
+  } catch {
+    return null;
   }
-  return null;
 }
 
-/**
- * Fetch likely datasheet link + a few reference pages using Google Custom Search.
- * Returns { datasheetUrl, references[] }
- */
-async function fetchDatasheetAndReferences(query) {
+// -----------------------------------------
+// Google: Datasheet + References
+// -----------------------------------------
+async function fetchDatasheetAndReferences(name) {
   const apiKey = process.env.CSE_API_KEY;
   const cx = process.env.CSE_CX;
+  if (!apiKey || !cx) return { datasheetUrl: null, references: [] };
 
-  if (!apiKey || !cx || !query) {
-    return { datasheetUrl: null, references: [] };
-  }
-
-  const q = `${query} datasheet pdf`;
-  const url = `https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(
-    q
-  )}&num=5&safe=active&key=${apiKey}&cx=${cx}`;
+  const query = `${name} datasheet pdf`;
+  const url = `https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(query)}&num=5&safe=active&key=${apiKey}&cx=${cx}`;
 
   try {
     const res = await fetch(url);
-    if (!res.ok) {
-      console.log("⚠️ Datasheet search HTTP error:", res.status, await res.text());
-      return { datasheetUrl: null, references: [] };
-    }
-
     const data = await res.json();
-    const items = Array.isArray(data.items) ? data.items : [];
 
     let datasheetUrl = null;
     const references = [];
 
-    for (const item of items) {
-      if (!item.link) continue;
-
+    for (const item of data.items || []) {
       const link = item.link;
-      const mime = item.mime || "";
       const display = (item.displayLink || "").toLowerCase();
 
-      const looksPdf =
-        mime === "application/pdf" ||
-        link.toLowerCase().endsWith(".pdf") ||
-        link.toLowerCase().includes("datasheet");
-
-      const looksManufacturer =
-        display.includes("microchip") ||
-        display.includes("espressif") ||
-        display.includes("st.com") ||
-        display.includes("ti.com") ||
-        display.includes("analog.com") ||
-        display.includes("nxp.com") ||
-        display.includes("infineon") ||
-        display.includes("onsemi") ||
-        display.includes("renesas");
-
-      if (!datasheetUrl && (looksPdf || looksManufacturer)) {
+      if (!datasheetUrl && (link.endsWith(".pdf") || link.includes("datasheet")))
         datasheetUrl = link;
-      }
 
       if (references.length < 4) {
         references.push({
@@ -127,14 +81,75 @@ async function fetchDatasheetAndReferences(query) {
     }
 
     return { datasheetUrl, references };
-  } catch (err) {
-    console.error("Google Datasheet Search error:", err);
+  } catch {
     return { datasheetUrl: null, references: [] };
   }
 }
+// ---------------------------------------------
+// GROQ: Refinement and Circuit ASCII Generator
+// ---------------------------------------------
+async function groqRefine(baseJson) {
+  const groqKey = process.env.GROQ_API_KEY;
+  if (!groqKey) return baseJson;
 
+  const systemPrompt = `
+You are ElectroLens PRO, an electronics encyclopedia AI.
+
+Your tasks:
+1. Improve the Gemini JSON fields with deeper engineering detail.
+2. Expand descriptions to 2–4 technical but student-friendly paragraphs.
+3. Generate ASCII CIRCUIT DIAGRAMS in baseJson.circuit_ascii for the MOST COMMON application.
+4. Add more realistic project ideas.
+5. Add safety warnings, usage mistakes, heat dissipation notes, etc.
+6. Suggest official manufacturer website IF KNOWN in baseJson.official_store.
+
+IMPORTANT:
+• ALWAYS return valid JSON.
+• NEVER add markdown.
+`;
+
+  const body = {
+    model: "mixtral-8x7b-32768",
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: JSON.stringify(baseJson, null, 2) }
+    ]
+  };
+
+  try {
+    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${groqKey}`
+      },
+      body: JSON.stringify(body)
+    });
+
+    const data = await res.json();
+    const refined = data?.choices?.[0]?.message?.content;
+
+    return JSON.parse(refined);
+  } catch (err) {
+    console.error("GROQ refine error:", err);
+    return baseJson;
+  }
+}
+
+// ---------------------------------------------
+// Online Shop Link Generator
+// ---------------------------------------------
+function generateShopLinks(name) {
+  const query = encodeURIComponent(name);
+
+  return {
+    shopee: `https://shopee.ph/search?keyword=${query}`,
+    lazada: `https://www.lazada.com.ph/tag/${query}/`,
+    amazon: `https://www.amazon.com/s?k=${query}`,
+    aliexpress: `https://www.aliexpress.com/wholesale?SearchText=${query}`
+  };
+}
 export default async function handler(req, res) {
-  // Only allow POST
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return res.status(405).json({ error: "Method not allowed" });
@@ -142,153 +157,85 @@ export default async function handler(req, res) {
 
   try {
     const body = await readJsonBody(req);
-    const { image, queryText } = body || {};
+    const { image, queryText } = body;
 
-    if (!image && !queryText) {
-      return res.status(400).json({
-        error: "Provide at least an image or a queryText."
-      });
-    }
+    if (!image && !queryText)
+      return res.status(400).json({ error: "Missing input" });
 
-    const apiKey = process.env.GOOGLE_API_KEY;
-    if (!apiKey) {
-      console.error("GOOGLE_API_KEY missing");
-      return res.status(500).json({ error: "Server misconfigured." });
-    }
-
-    const genAI = new GoogleGenerativeAI(apiKey);
+    // -----------------------------
+    // GEMINI IDENTIFICATION
+    // -----------------------------
+    const geminiKey = process.env.GOOGLE_API_KEY;
+    const genAI = new GoogleGenerativeAI(geminiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-
-    const userText =
-      queryText && queryText.trim().length > 0
-        ? `User query / label: "${queryText.trim()}".`
-        : "No text label given, identify only from the image.";
 
     const parts = [
       {
         text: `
-You are ElectroLens, an expert Electronics Engineer and components encyclopedia.
-
-FOCUS ONLY ON ELECTRONICS-RELATED ITEMS:
-- Electronic components (resistors, capacitors, diodes, transistors, ICs, regulators, etc.)
-- Microcontrollers and dev boards (Arduino, ESP32, STM32, etc.)
-- Modules (sensor boards, relay modules, power modules, etc.)
-- Test equipment (multimeter, oscilloscope, power supply, etc.)
-- Tools (soldering iron, breadboard, jumper wires, etc.)
-
-TASK:
-Look at the provided image and/or text label and identify the most likely electronics-related item.
-
-Write your answer as if it were an encyclopedia entry:
-- Give a short, precise name.
-- In "description", write 2–3 short paragraphs:
-  1) High-level overview and what family it belongs to.
-  2) Internal principle of operation / architecture in simple terms.
-  3) Typical usage patterns and design notes.
-- In "key_specs", list concrete, realistic numbers when commonly known
-  (voltage ranges, current, package, frequency, tolerance, memory size, etc.).
-- In "typical_uses", focus on real-world circuits, boards, and applications.
-- In "project_ideas", suggest 3–5 simple project ideas (student level) that use this part.
-- In "common_mistakes", list 3–5 common mistakes / pitfalls / warnings when using this part.
-
-Respond ONLY with a JSON object in this exact format:
-
+Identify this electronics component and output STRICT JSON:
 {
-  "name": "Short specific name, like 'ESP32 Dev Board' or '10kΩ Carbon Film Resistor'",
-  "category": "Component | Microcontroller | Tool | Test Equipment | Module | Power Supply | Other",
-  "description": "2–3 short paragraphs explaining what it is and how it works, in simple words.",
-  "typical_uses": [
-    "Where and how this is usually used in electronics projects or industry"
-  ],
-  "where_to_buy": [
-    "Typical places to buy (local electronics shops, online like Lazada/Shopee/Amazon, distributors like Mouser/Digi-Key, etc.)"
-  ],
-  "key_specs": [
-    "Important specs or parameters (voltage ratings, current, power, tolerance, package, frequency, memory size, etc.) if identifiable. If unsure, be honest."
-  ],
-  "datasheet_hint": "Short instruction on what to search on Google to find its datasheet. Include an example search query.",
-  "project_ideas": [
-    "Short project idea 1",
-    "Short project idea 2"
-  ],
-  "common_mistakes": [
-    "Common mistake or warning 1",
-    "Common mistake or warning 2"
-  ]
+ "name":"",
+ "category":"",
+ "description":"",
+ "typical_uses":[],
+ "where_to_buy":[],
+ "key_specs":[],
+ "datasheet_hint":"",
+ "project_ideas":[],
+ "common_mistakes":[],
+ "image_search_query":""
 }
-
-RULES:
-- If you are not confident about the exact model, describe the general device type and say that the model is approximate.
-- Do NOT invent unrealistic, ultra-specific part numbers if you cannot see them.
-- If the object is not clearly electronics-related, set:
-  "name": "Not an electronics-focused object",
-  "category": "Other"
-and briefly explain that it's outside electronics.
-      `.trim()
-      },
-      { text: userText }
+`
+      }
     ];
 
     if (image) {
-      const extracted = extractBase64FromDataUrl(image);
-      if (!extracted) {
-        return res.status(400).json({
-          error: "Image must be a base64 data URL like 'data:image/jpeg;base64,...'"
-        });
-      }
+      const ex = extractBase64FromDataUrl(image);
       parts.push({
-        inlineData: {
-          mimeType: extracted.mimeType || "image/jpeg",
-          data: extracted.base64
-        }
+        inlineData: { mimeType: ex.mimeType, data: ex.base64 }
       });
+    } else {
+      parts.push({ text: queryText });
     }
 
-    const geminiResult = await model.generateContent({
+    const reply = await model.generateContent({
       contents: [{ role: "user", parts }],
       generationConfig: { responseMimeType: "application/json" }
     });
 
-    const text = geminiResult.response.text();
+    let baseJson = JSON.parse(reply.response.text());
 
-    let parsed;
-    try {
-      parsed = JSON.parse(text);
-    } catch (e) {
-      console.error("Failed to parse JSON from Gemini:", text);
-      return res.status(500).json({ error: "Failed to parse AI response from Gemini." });
-    }
+    // -----------------------------
+    // GOOGLE IMAGE
+    // -----------------------------
+    const imgQuery = baseJson.image_search_query || baseJson.name || queryText;
+    baseJson.real_image = await fetchRealImageFromGoogle(imgQuery);
 
-    const result = {
-      name: parsed.name || "Unknown device",
-      category: parsed.category || "Other",
-      description: parsed.description || "No description provided.",
-      typical_uses: Array.isArray(parsed.typical_uses) ? parsed.typical_uses : [],
-      where_to_buy: Array.isArray(parsed.where_to_buy) ? parsed.where_to_buy : [],
-      key_specs: Array.isArray(parsed.key_specs) ? parsed.key_specs : [],
-      datasheet_hint:
-        parsed.datasheet_hint ||
-        "Search for the device name + 'datasheet' on your preferred search engine.",
-      project_ideas: Array.isArray(parsed.project_ideas) ? parsed.project_ideas : [],
-      common_mistakes: Array.isArray(parsed.common_mistakes)
-        ? parsed.common_mistakes
-        : []
-    };
+    // -----------------------------
+    // GOOGLE DATASHEET
+    // -----------------------------
+    const ds = await fetchDatasheetAndReferences(baseJson.name);
+    baseJson.datasheet_url = ds.datasheetUrl;
+    baseJson.references = ds.references;
 
-    // Attach real Google image
-    const realImageUrl = await fetchRealImageFromGoogle(result.name);
-    result.real_image = realImageUrl || null;
+    // -----------------------------
+    // SHOP LINKS
+    // -----------------------------
+    baseJson.shop_links = generateShopLinks(baseJson.name);
 
-    // Attach datasheet URL + reference links
-    const { datasheetUrl, references } = await fetchDatasheetAndReferences(
-      result.name
-    );
-    result.datasheet_url = datasheetUrl || null;
-    result.references = references;
+    // -----------------------------
+    // GROQ REFINEMENT
+    // -----------------------------
+    const refined = await groqRefine(baseJson);
 
-    return res.status(200).json(result);
+    // -----------------------------
+    // STORE JSON FOR CHAT MODE
+    // -----------------------------
+    refined.context_blob = JSON.stringify(refined);
+
+    return res.status(200).json(refined);
   } catch (err) {
-    console.error("Error in /api/electro-lookup:", err);
-    return res.status(500).json({ error: "Gemini AI request failed." });
+    console.error("ElectroLens error:", err);
+    return res.status(500).json({ error: "Server failed." });
   }
 }

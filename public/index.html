@@ -4,1476 +4,907 @@
   <meta charset="UTF-8" />
   <title>ElectroLens – AI Electronics Engineer Encyclopedia</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
   <style>
     :root {
       --bg: #020617;
       --card: #02091a;
       --accent: #6366f1;
-      --accent-soft: rgba(99, 102, 241, 0.2);
-      --border: rgba(148, 163, 184, 0.35);
+      --border: rgba(148,163,184,0.35);
       --text: #e5e7eb;
       --muted: #9ca3af;
-      --danger: #fecaca;
-      --radius-lg: 18px;
-      --radius-md: 10px;
+      --danger: #fca5a5;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Inter", sans-serif;
-      min-height: 100vh;
-      background: radial-gradient(circle at top, #0b1220, #020617 55%, #000 100%);
+      font-family: "Inter", sans-serif;
+      background: radial-gradient(circle at top, #0b1220, #020617 60%, #000);
       color: var(--text);
       display: flex;
-      align-items: flex-start;
       justify-content: center;
-      padding: 24px;
+      align-items: flex-start;
+      padding: 20px;
+      min-height: 100vh;
     }
 
     .page {
       width: 100%;
-      max-width: 1180px;
+      max-width: 1250px;
       display: grid;
-      grid-template-columns: minmax(0, 1.05fr) minmax(0, 1.55fr); /* more space for encyclopedia */
+      grid-template-columns: 1fr 1.7fr; /* encyclopedia gets more space */
       gap: 20px;
-      align-items: flex-start; /* 🔥 prevents cards stretching to full row height */
+      align-items: flex-start;
     }
 
-    @media (max-width: 1000px) {
-      .page {
-        grid-template-columns: minmax(0, 1fr);
-      }
-      body {
-        padding: 14px;
-      }
+    @media (max-width: 900px) {
+      .page { grid-template-columns: 1fr; }
     }
 
     .card, .side-card {
-      border-radius: 20px;
+      background: rgba(20, 25, 40, 0.9);
       border: 1px solid var(--border);
-      background: radial-gradient(circle at top left, #020617, #020617 40%, #020617 100%);
-      box-shadow: 0 18px 45px rgba(15, 23, 42, 0.9);
-      position: relative;
+      border-radius: 20px;
       overflow: hidden;
-    }
-
-    .card::before, .side-card::before {
-      content: "";
-      position: absolute;
-      inset: -40%;
-      background:
-        radial-gradient(circle at 0 0, rgba(129, 140, 248, 0.25), transparent 60%),
-        radial-gradient(circle at 100% 0, rgba(45, 212, 191, 0.18), transparent 60%);
-      opacity: 0.7;
-      pointer-events: none;
+      box-shadow: 0 20px 45px rgba(0,0,0,0.4);
+      position: relative;
     }
 
     .card-inner, .side-inner {
-      position: relative;
-      z-index: 1;
       padding: 18px;
     }
 
-    .card-inner {
-      padding-bottom: 16px;
-    }
-
-    .side-card {
-      background: rgba(15, 23, 42, 0.98);
-    }
-
-    /* ⬇️ Let encyclopedia content decide height; no forced scroll */
-    .side-inner {
-      padding: 18px 18px 14px;
-      max-height: none;
-      overflow-y: visible;
-    }
-
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 5px 10px;
-      border-radius: 999px;
-      background: rgba(15, 23, 42, 0.9);
-      border: 1px solid var(--border);
-      font-size: 12px;
-      color: var(--muted);
-      margin-bottom: 8px;
-    }
-
-    .badge-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #22c55e;
-      box-shadow: 0 0 12px rgba(34, 197, 94, 0.9);
-    }
-
     h1 {
-      font-size: clamp(24px, 2.4vw, 28px);
-      line-height: 1.2;
-      margin-bottom: 6px;
+      font-size: 22px;
+      margin-bottom: 8px;
     }
 
     h1 span {
       background: linear-gradient(120deg, #818cf8, #22d3ee);
       -webkit-background-clip: text;
-      background-clip: text;
       color: transparent;
     }
 
     .subtext {
-      font-size: 13px;
       color: var(--muted);
+      font-size: 13px;
       margin-bottom: 12px;
-      max-width: 520px;
     }
 
+    /* MODE TABS */
     .mode-tabs {
       display: inline-flex;
+      background: rgba(15,23,42,0.9);
+      border: 1px solid var(--border);
+      border-radius: 999px;
       padding: 3px;
-      border-radius: 999px;
-      background: rgba(15, 23, 42, 0.95);
-      border: 1px solid var(--border);
-      margin-bottom: 10px;
-    }
-
-    .mode-tab {
-      border-radius: 999px;
-      padding: 7px 13px;
-      font-size: 12px;
-      color: var(--muted);
-      cursor: pointer;
-      border: none;
-      background: transparent;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      transition: background 0.12s, color 0.12s;
-    }
-
-    .mode-tab.active {
-      background: rgba(15, 23, 42, 1);
-      color: var(--text);
-    }
-
-    .mode-tab span.icon {
-      font-size: 13px;
-    }
-
-    .mode-panel {
-      margin-top: 10px;
-    }
-
-    .camera-shell {
-      border-radius: 16px;
-      background: radial-gradient(circle at top, #020617, #020617);
-      padding: 12px;
-      border: 1px solid var(--border);
-    }
-
-    .camera-top {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 11px;
-      color: var(--muted);
       margin-bottom: 8px;
     }
 
-    .dots { display:flex; gap:4px; }
-    .dot { width:7px; height:7px; border-radius:999px; }
-    .dot.red { background:#f97373; }
-    .dot.amber { background:#facc15; }
-    .dot.green { background:#4ade80; }
-
-    .lens-indicator {
-      display:flex;
-      align-items:center;
-      gap:6px;
+    .mode-tab {
+      padding: 7px 14px;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      font-size: 12px;
+      color: var(--muted);
+      border-radius: 999px;
+      transition: 0.15s;
     }
 
-    .lens-led {
-      width:9px;
-      height:9px;
-      border-radius:999px;
-      background:#f97316;
-      box-shadow:0 0 8px rgba(249,115,22,0.9);
-      animation:lens 1.3s infinite;
+    .mode-tab.active {
+      background: rgba(255,255,255,0.1);
+      color: white;
     }
 
-    .lens-text {
-      text-transform:uppercase;
-      letter-spacing:0.14em;
-    }
-
-    @keyframes lens {
-      0%,100% { transform:scale(1); opacity:0.8; }
-      50% { transform:scale(1.2); opacity:1; }
+    /* CAMERA */
+    .camera-shell {
+      background: rgba(15,20,35,0.6);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px;
     }
 
     .glass-frame {
-      position:relative;
-      border-radius:12px;
-      overflow:hidden;
-      background:#020617;
-      border:1px solid rgba(31,41,55,0.9);
-      min-height:230px;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: black;
+      position: relative;
+      min-height: 220px;
     }
 
-    video, #uploadPreview {
-      width:100%;
-      display:block;
-      object-fit:cover;
-      background:#020617;
+    video, #cameraCapturePreview {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
     }
 
-    #uploadPreview {
-      max-height:320px;
-    }
-
-    /* captured camera preview image overlay */
     #cameraCapturePreview {
-      position:absolute;
-      inset:0;
-      width:100%;
-      height:100%;
-      object-fit:cover;
-      display:none;
+      display: none;
+      position: absolute;
+      inset: 0;
     }
 
     .camera-status {
-      position:absolute;
-      left:10px;
-      bottom:10px;
-      font-size:11px;
-      background:rgba(15,23,42,0.85);
-      border-radius:999px;
-      padding:4px 8px;
-      display:inline-flex;
-      align-items:center;
-      gap:6px;
-      border:1px solid rgba(148,163,184,0.5);
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      background: rgba(0,0,0,0.5);
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      color: var(--muted);
     }
 
-    .status-dot {
-      width:7px;
-      height:7px;
-      border-radius:50%;
-      background:#f97373;
-      box-shadow:0 0 10px rgba(248,113,113,0.9);
-    }
-
-    .status-dot.on {
-      background:#22c55e;
-      box-shadow:0 0 10px rgba(34,197,94,0.9);
-    }
-
-    .controls {
-      display:flex;
-      flex-wrap:wrap;
-      gap:10px;
-      align-items:center;
-      margin-top:10px;
-    }
-
-    .primary-btn {
-      border:none;
-      outline:none;
-      cursor:pointer;
-      border-radius:999px;
-      padding:8px 16px;
-      font-size:13px;
-      font-weight:500;
-      display:inline-flex;
-      align-items:center;
-      gap:6px;
-      background:radial-gradient(circle at top left,#4f46e5,#1d4ed8);
-      color:white;
-      box-shadow:0 10px 25px rgba(79,70,229,0.6);
-      transition:transform 0.12s,box-shadow 0.12s,filter 0.12s;
-    }
-
-    .primary-btn:disabled {
-      opacity:0.55;
-      cursor:not-allowed;
-      box-shadow:none;
-      transform:none;
-    }
-
-    .primary-btn:hover:not(:disabled) {
-      transform:translateY(-1px);
-      box-shadow:0 16px 40px rgba(79,70,229,0.8);
-      filter:brightness(1.06);
-    }
-
-    .secondary-btn {
-      border-radius:999px;
-      border:1px solid var(--border);
-      background:rgba(15,23,42,0.95);
-      color:var(--muted);
-      padding:7px 12px;
-      font-size:12px;
-      display:inline-flex;
-      align-items:center;
-      gap:6px;
-      cursor:pointer;
-      transition:background 0.12s,color 0.12s,border-color 0.12s;
-    }
-
-    .secondary-btn:hover {
-      background:rgba(15,23,42,1);
-      color:var(--text);
-      border-color:var(--accent);
-    }
-
-    .pill {
-      font-size:11px;
-      padding:6px 10px;
-      border-radius:999px;
-      border:1px solid var(--border);
-      color:var(--muted);
-      background:rgba(15,23,42,0.9);
-    }
-
-    .hint {
-      font-size:11px;
-      color:var(--muted);
-      margin-top:6px;
-    }
-
-    .manual-input-row {
-      display:flex;
-      gap:8px;
-      margin-top:10px;
-    }
-
-    .manual-input-row input {
-      flex:1;
-      border-radius:999px;
-      border:1px solid var(--border);
-      padding:8px 12px;
-      background:rgba(15,23,42,0.95);
-      color:var(--text);
-      font-size:13px;
-      outline:none;
-    }
-
-    .manual-input-row input::placeholder {
-      color:rgba(148,163,184,0.8);
-    }
-
-    /* SIDE CARD / ENCYCLOPEDIA */
-    .side-header {
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      gap:8px;
-      font-size:15px;
-      margin-bottom:6px;
-    }
-
-    .title-left {
-      display:flex;
-      align-items:center;
-      gap:6px;
-    }
-
-    .title-icon {
-      width:24px;
-      height:24px;
-      border-radius:999px;
-      background:radial-gradient(circle at 30% 0,#a855f7,#4f46e5);
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      font-size:14px;
-    }
-
-    .chip-row {
-      display:flex;
-      flex-wrap:wrap;
-      gap:6px;
-      justify-content:flex-end;
-    }
-
-    .chip {
-      font-size:11px;
-      padding:4px 9px;
-      border-radius:999px;
-      background:rgba(15,23,42,1);
-      border:1px solid rgba(148,163,184,0.5);
-      color:var(--muted);
-    }
-
-    .chip.accent {
-      background:rgba(30,64,175,0.45);
-      color:#c7d2fe;
-      border-color:var(--accent);
-    }
-
-    .name-row {
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      gap:8px;
-      margin-top:6px;
-      margin-bottom:2px;
-    }
-
-    .device-name {
-      font-weight:600;
-      font-size:16px;
-    }
-
-    .device-category {
-      font-size:11px;
-      padding:3px 8px;
-      border-radius:999px;
-      border:1px solid rgba(148,163,184,0.5);
-      background:rgba(15,23,42,1);
-      color:#c7d2fe;
-    }
-
-    .section {
-      margin-top:8px;
-      font-size:13.5px;
-      line-height:1.55;
-    }
-
-    .section-title {
-      font-size:11px;
-      text-transform:uppercase;
-      letter-spacing:0.16em;
-      color:var(--muted);
-      margin-bottom:3px;
-    }
-
-    .section-content {
-      font-size:13.5px;
-    }
-
-    .section ul {
-      padding-left:16px;
-    }
-
-    .section li {
-      margin-bottom:3px;
-    }
-
-    .placeholder {
-      color:var(--muted);
-      font-style:italic;
-    }
-
-    .error {
-      color:var(--danger);
-    }
-
-    .status-bar {
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      font-size:11px;
-      color:var(--muted);
-      margin-top:10px;
-      gap:8px;
-    }
-
-    .status-dot-ai {
-      width:7px;
-      height:7px;
-      border-radius:999px;
-      background:#22c55e;
-      box-shadow:0 0 10px rgba(34,197,94,0.9);
-      animation:aiPulse 1.4s infinite;
-    }
-
-    @keyframes aiPulse {
-      0% { transform:scale(1); opacity:1; }
-      70% { transform:scale(1.8); opacity:0; }
-      100% { transform:scale(1); opacity:0; }
-    }
-
-    /* Loading spinner */
-    .loader {
-      width:14px;
-      height:14px;
-      border-radius:50%;
-      border:2px solid rgba(148,163,184,0.6);
-      border-top-color:#6366f1;
-      animation:spin 0.7s linear infinite;
-    }
-
-    @keyframes spin {
-      to { transform:rotate(360deg); }
-    }
-
-    .tiny {
-      font-size:10px;
-      opacity:0.75;
-      text-align:right;
-    }
-
-    .history {
-      margin-top:8px;
-      padding-top:8px;
-      border-top:1px dashed rgba(148,163,184,0.5);
-      font-size:11px;
-      max-height:120px;
-      overflow:auto;
-    }
-
-    .history-item {
-      padding:4px 0;
-      border-bottom:1px dashed rgba(30,64,175,0.5);
-    }
-
-    .history-item:last-child { border-bottom:none; }
-
-    .history-item .time {
-      color:#a5b4fc;
-      font-size:10px;
-      margin-bottom:1px;
-    }
-
-    .history-item .summary {
-      color:#e5e7eb;
-      font-size:11px;
-    }
-
-    /* ref image */
-    #refImage {
-      max-width: 100%;
-      border-radius: 12px;
-      border: 1px solid rgba(148,163,184,0.5);
-      margin-top: 4px;
-      display: none;
-    }
-
-    /* references / links */
-    .ref-link {
-      color:#93c5fd;
-      text-decoration:none;
-    }
-
-    .ref-link:hover {
-      text-decoration:underline;
-    }
-
-    .ref-snippet {
-      font-size:11px;
-      color:var(--muted);
-      margin-top:1px;
-    }
-
-    .datasheet-link {
-      display:inline-flex;
-      align-items:center;
-      gap:6px;
-      font-size:12px;
-      padding:5px 10px;
-      border-radius:999px;
-      border:1px solid rgba(129,140,248,0.6);
-      background:rgba(30,64,175,0.25);
-      color:#c7d2fe;
-      text-decoration:none;
-      margin-bottom:6px;
-    }
-
-    .datasheet-link:hover {
-      background:rgba(30,64,175,0.45);
-    }
-
-    /* web search buttons */
-    .web-links-row {
-      display:flex;
-      flex-wrap:wrap;
-      gap:6px;
-      margin-top:4px;
-    }
-
-    .web-link-btn {
-      border-radius:999px;
-      border:1px solid rgba(148,163,184,0.6);
-      padding:4px 9px;
-      font-size:11px;
-      background:rgba(15,23,42,1);
-      color:#cbd5f5;
-      text-decoration:none;
-      display:inline-flex;
-      align-items:center;
-      gap:4px;
-    }
-
-    .web-link-btn:hover {
-      border-color:var(--accent);
-      color:white;
-    }
-
-    /* UPLOAD DROPZONE STYLING */
+    /* UPLOAD BOX */
     .upload-dropzone {
       border: 2px dashed rgba(148,163,184,0.4);
       border-radius: 16px;
-      padding: 26px;
-      background: rgba(15,23,42,0.5);
+      background: rgba(15,20,35,0.4);
+      padding: 28px;
+      min-height: 200px;
       text-align: center;
       cursor: pointer;
-      transition: background 0.15s, border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+      transition: 0.2s;
       position: relative;
-      min-height: 210px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
       overflow: hidden;
     }
 
     .upload-dropzone:hover {
-      background: rgba(15,23,42,0.7);
       border-color: #6366f1;
+      background: rgba(20,25,45,0.6);
     }
 
     .upload-dropzone.dragover {
-      background: radial-gradient(circle at top, rgba(79,70,229,0.25), rgba(15,23,42,0.9));
       border-color: #818cf8;
+      background: rgba(60,70,120,0.3);
       transform: scale(1.01);
-      box-shadow: 0 14px 40px rgba(79,70,229,0.45);
-    }
-
-    .upload-dropzone.dragover::before {
-      content: "";
-      position: absolute;
-      inset: -40%;
-      background:
-        radial-gradient(circle at 0 0, rgba(129,140,248,0.5), transparent 60%),
-        radial-gradient(circle at 100% 0, rgba(56,189,248,0.4), transparent 60%);
-      opacity: 0.4;
-      pointer-events: none;
-    }
-
-    .upload-prompt {
-      pointer-events: none;
-      z-index: 1;
-    }
-
-    .upload-icon {
-      font-size: 42px;
-      opacity: 0.95;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .upload-icon svg {
-      width: 44px;
-      height: 44px;
-      stroke: #c7d2fe;
-      stroke-width: 1.7;
-    }
-
-    .upload-text {
-      margin-top: 8px;
-      font-size: 14px;
-      color: var(--muted);
-    }
-
-    .upload-text span {
-      font-size: 12px;
-      opacity: 0.75;
     }
 
     #uploadPreview {
-      max-width: 100%;
-      max-height: 100%;
-      border-radius: 12px;
-      border: 1px solid rgba(148,163,184,0.5);
       display: none;
       position: absolute;
       inset: 0;
+      width: 100%;
       object-fit: contain;
-      background: rgba(0,0,0,0.65);
-      z-index: 0;
+      background: rgba(0,0,0,0.7);
     }
 
-    @media (max-width: 700px) {
-      .side-inner {
-        padding-bottom: 16px;
-      }
+    .upload-icon svg {
+      width: 48px;
+      height: 48px;
+      stroke: #c7d2fe;
+      opacity: 0.9;
     }
+
+    .upload-text {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    /* CONTROLS */
+    .primary-btn {
+      background: linear-gradient(120deg,#4f46e5,#1d4ed8);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      font-size: 13px;
+      box-shadow: 0 6px 16px rgba(79,70,229,0.4);
+      transition: 0.15s;
+    }
+
+    .primary-btn:hover { transform: translateY(-2px); }
+
+    .primary-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* TEXT INPUT */
+    .manual-input-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .manual-input-row input {
+      flex: 1;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(15,20,35,0.9);
+      color: var(--text);
+    }
+    /* ENCYCLOPEDIA PANEL */
+    .side-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .title-icon {
+      width: 22px;
+      height: 22px;
+      background: linear-gradient(120deg,#8b5cf6,#4f46e5);
+      border-radius: 50%;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size: 12px;
+    }
+
+    .chip {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: #cbd5f5;
+      margin-left: 4px;
+    }
+
+    .device-name { font-weight: 600; font-size: 17px; }
+    .device-category {
+      padding: 3px 7px;
+      font-size: 11px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+    }
+
+    .section { margin-top: 10px; }
+    .section-title {
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 3px;
+    }
+
+    .section-content { font-size: 13.5px; line-height: 1.55; }
+    .section ul { padding-left: 18px; }
+    .section li { margin-bottom: 3px; }
+
+    .placeholder { font-style: italic; opacity: 0.7; }
+
+    /* CIRCUIT ASCII BOX */
+    .ascii-box {
+      background: rgba(0,0,0,0.4);
+      padding: 12px;
+      border-radius: 8px;
+      font-family: monospace;
+      white-space: pre;
+      font-size: 12px;
+      border: 1px solid rgba(255,255,255,0.1);
+      overflow-x: auto;
+    }
+
+    /* SHOP LINKS */
+    .shop-links {
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      margin-top:4px;
+    }
+
+    .shop-btn {
+      padding:5px 12px;
+      font-size:12px;
+      border-radius:8px;
+      background:rgba(255,255,255,0.06);
+      border:1px solid rgba(255,255,255,0.15);
+      color:#a5b4fc;
+      text-decoration:none;
+      transition:0.15s;
+    }
+
+    .shop-btn:hover {
+      background:rgba(255,255,255,0.1);
+      color:white;
+    }
+
+    /* CHAT PANEL */
+    .chat-container {
+      margin-top: 12px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      padding: 10px;
+    }
+
+    .chat-header {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      cursor:pointer;
+    }
+
+    .chat-header h3 {
+      font-size: 13px;
+      margin:0;
+    }
+
+    .chat-toggle-icon {
+      font-size: 16px;
+      transition: 0.2s;
+    }
+
+    .chat-messages {
+      margin-top: 10px;
+      max-height: 220px;
+      overflow-y: auto;
+      display:none;
+    }
+
+    .msg {
+      margin-bottom: 10px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      font-size: 13px;
+      line-height:1.4;
+      max-width: 92%;
+    }
+
+    .msg-user {
+      background: #3b82f6;
+      color: white;
+      margin-left: auto;
+    }
+
+    .msg-ai {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: #e2e8f0;
+    }
+
+    .chat-input-row {
+      margin-top: 10px;
+      display:flex;
+      gap:8px;
+      align-items:center;
+      display:none;
+    }
+
+    .chat-input {
+      flex:1;
+      padding:8px 10px;
+      background:rgba(255,255,255,0.08);
+      border:1px solid rgba(255,255,255,0.2);
+      border-radius:8px;
+      color:white;
+    }
+
+    .chat-send {
+      background:#4f46e5;
+      color:white;
+      border:none;
+      padding:8px 14px;
+      border-radius:8px;
+      cursor:pointer;
+      font-size:13px;
+    }
+
+    .chat-send:disabled {
+      opacity:0.5; cursor:not-allowed;
+    }
+
+    /* STATUS BAR */
+    .status-bar {
+      margin-top: 14px;
+      font-size: 11px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      color:var(--muted);
+    }
+
+    .loader {
+      width:14px; height:14px;
+      border-radius:50%;
+      border:2px solid rgba(255,255,255,0.2);
+      border-top-color:#6366f1;
+      animation:spin 0.7s linear infinite;
+      display:none;
+    }
+
+    @keyframes spin { to { transform:rotate(360deg);} }
   </style>
 </head>
+
 <body>
   <main class="page">
-    <!-- LEFT: Input modes -->
+
+    <!-- LEFT PANEL -->
     <section class="card">
       <div class="card-inner">
-        <div class="badge">
-          <span class="badge-dot"></span>
-          ElectroLens • AI Electronics Encyclopedia
-        </div>
-        <h1>Identify <span>electronics components & tools</span> with AI.</h1>
+
+        <h1>Identify <span>electronics components</span> instantly</h1>
         <p class="subtext">
-          Use your camera, upload a photo, or type the name of a component.
-          ElectroLens mixes AI with web search to act like an electronics encyclopedia:
-          description, specs, project ideas, warnings, and datasheet links.
+          Upload or capture a photo. ElectroLens uses Gemini + Groq + Google Search
+          to produce a full encyclopedia entry with diagrams, specs, and links.
         </p>
 
+        <!-- MODE TABS -->
         <div class="mode-tabs">
-          <button class="mode-tab active" data-mode="camera">
-            <span class="icon">📷</span> Camera
-          </button>
-          <button class="mode-tab" data-mode="upload">
-            <span class="icon">🖼</span> Upload
-          </button>
-          <button class="mode-tab" data-mode="manual">
-            <span class="icon">🔍</span> Type Name
-          </button>
+          <button class="mode-tab active" data-mode="camera">📷 Camera</button>
+          <button class="mode-tab" data-mode="upload">🖼 Upload</button>
+          <button class="mode-tab" data-mode="manual">🔍 Type Name</button>
         </div>
 
         <!-- CAMERA MODE -->
         <div class="mode-panel" id="mode-camera">
           <div class="camera-shell">
-            <div class="camera-top">
-              <div class="dots">
-                <div class="dot red"></div>
-                <div class="dot amber"></div>
-                <div class="dot green"></div>
-              </div>
-              <div class="lens-indicator">
-                <div class="lens-led"></div>
-                <span class="lens-text" id="lensText">waiting…</span>
-              </div>
-            </div>
-
             <div class="glass-frame">
               <video id="camera" autoplay playsinline></video>
-              <!-- Captured still from the camera -->
-              <img id="cameraCapturePreview" alt="Captured frame" />
+              <img id="cameraCapturePreview" />
               <div class="camera-status">
-                <span class="status-dot" id="cameraDot"></span>
-                <span id="cameraStatusText">Waiting for permission…</span>
+                <span id="cameraStatusText">Waiting for permission...</span>
               </div>
             </div>
           </div>
 
-          <div class="controls">
-            <button class="primary-btn" id="analyzeCameraBtn" disabled>
-              <span>🔍</span>
-              <span>Analyze from Camera</span>
-            </button>
-
-            <button class="secondary-btn" id="toggleCameraBtn">
-              <span id="toggleCameraText">Start camera</span>
-            </button>
-
-            <div class="pill">
-              Best for quick bench identification (breadboards, dev boards, tools).
-            </div>
+          <div style="margin-top:10px; display:flex; gap:8px;">
+            <button class="primary-btn" id="analyzeCameraBtn" disabled>Analyze</button>
+            <button class="primary-btn" id="toggleCameraBtn">Start Camera</button>
           </div>
-
-          <p class="hint">
-            Tip: Hold a single component or tool near the center with good lighting.
-          </p>
         </div>
 
         <!-- UPLOAD MODE -->
         <div class="mode-panel" id="mode-upload" style="display:none;">
           <div class="upload-dropzone" id="uploadDropzone">
-            <div class="upload-prompt" id="uploadPrompt">
-              <div class="upload-icon" aria-hidden="true">
-                <!-- upload icon -->
-                <svg viewBox="0 0 24 24" fill="none">
-                  <path d="M7 17H5a2 2 0 0 1-2-2V9" />
-                  <path d="M21 9v6a2 2 0 0 1-2 2h-2" />
-                  <path d="M12 3v10" />
-                  <path d="M8.5 6.5L12 3l3.5 3.5" />
-                  <rect x="7" y="17" width="10" height="4" rx="1" />
-                </svg>
+            <div id="uploadPrompt">
+              <div class="upload-icon">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M7 17H5a2 2 0 0 1-2-2V9"/><path d="M21 9v6a2 2 0 0 1-2 2h-2"/><path d="M12 3v10"/><path d="M8.5 6.5L12 3l3.5 3.5"/><rect x="7" y="17" width="10" height="4" rx="1"/></svg>
               </div>
-              <div class="upload-text">
-                Drag & Drop an image here<br>
-                <span>or click to upload a file</span>
-              </div>
+              <div class="upload-text">Drag & Drop or Click to Upload</div>
             </div>
 
-            <img id="uploadPreview" alt="Upload preview" />
+            <img id="uploadPreview" />
             <input type="file" id="fileInput" accept="image/*" hidden />
           </div>
 
-          <div class="controls" style="margin-top:10px;">
-            <button class="primary-btn" id="analyzeUploadBtn" disabled>
-              <span>🔍</span>
-              <span>Analyze Uploaded Image</span>
-            </button>
-            <div class="pill">
-              Works well for photos from your phone or desktop.
-            </div>
-          </div>
+          <button class="primary-btn" id="analyzeUploadBtn" disabled style="margin-top:10px;">
+            Analyze Image
+          </button>
         </div>
 
         <!-- MANUAL MODE -->
         <div class="mode-panel" id="mode-manual" style="display:none;">
-          <div class="section-title">Type the name / code</div>
           <div class="manual-input-row">
-            <input
-              id="manualInput"
-              type="text"
-              placeholder="e.g. 'LM7805 voltage regulator', 'ESP32 DevKitC', '10kΩ resistor 1/4W'"
-            />
-            <button class="primary-btn" id="manualSearchBtn">
-              🔍
-            </button>
+            <input id="manualInput" placeholder="e.g. ESP32 DevKit, LM7805, 2N2222 transistor">
+            <button class="primary-btn" id="manualSearchBtn">Search</button>
           </div>
-          <p class="hint">
-            Great if the part number is already known. ElectroLens will explain what it is, typical uses, where to buy,
-            key specs, and how to find its datasheet.
-          </p>
         </div>
 
-        <canvas id="captureCanvas" style="display:none;"></canvas>
+        <canvas id="captureCanvas" hidden></canvas>
       </div>
     </section>
 
-    <!-- RIGHT: AI Output (Encyclopedia) -->
+    <!-- RIGHT PANEL: ENCYCLOPEDIA -->
     <aside class="side-card">
       <div class="side-inner">
+
         <div class="side-header">
           <div class="title-left">
             <div class="title-icon">⚡</div>
-            <span>Electronics Encyclopedia Result</span>
+            <span>ElectroLens Encyclopedia</span>
           </div>
-          <div class="chip-row">
-            <div class="chip accent">Gemini • Vision + Text</div>
-            <div class="chip">Components • Tools • Boards</div>
+          <div>
+            <span class="chip">Gemini Vision</span>
+            <span class="chip">Groq Mixtral</span>
+            <span class="chip">Google Search</span>
           </div>
         </div>
 
         <div class="name-row">
-          <div class="device-name" id="deviceName">
-            No device analyzed yet
-          </div>
-          <div class="device-category" id="deviceCategory">
-            —
-          </div>
+          <div class="device-name" id="deviceName">No device yet</div>
+          <div class="device-category" id="deviceCategory"></div>
         </div>
 
+        <!-- DESCRIPTION -->
         <div class="section">
           <div class="section-title">Overview</div>
           <div class="section-content" id="description">
-            <p class="placeholder">
-              Use the camera, upload an image, or type a name to see a detailed explanation like an Electronics Engineer.
-            </p>
+            <p class="placeholder">Analyze an image or enter a component name.</p>
           </div>
         </div>
 
+        <!-- TYPICAL USES -->
         <div class="section">
           <div class="section-title">Typical Uses</div>
-          <div class="section-content" id="typicalUses">
-            <p class="placeholder">Common applications will appear here (projects, circuits, lab use, etc.).</p>
-          </div>
+          <div class="section-content" id="typicalUses"></div>
         </div>
 
-        <div class="section">
-          <div class="section-title">Where to Buy</div>
-          <div class="section-content" id="whereToBuy">
-            <p class="placeholder">Expected sources (local electronics shops, online marketplaces, distributors).</p>
-          </div>
-        </div>
-
+        <!-- SPECS -->
         <div class="section">
           <div class="section-title">Key Specs</div>
-          <div class="section-content" id="keySpecs">
-            <p class="placeholder">Important parameters like voltage, current, power rating, package, etc. will show here.</p>
-          </div>
+          <div class="section-content" id="keySpecs"></div>
         </div>
 
+        <!-- PROJECT IDEAS -->
         <div class="section">
           <div class="section-title">Project Ideas</div>
-          <div class="section-content" id="projectIdeas">
-            <p class="placeholder">Simple project ideas using this component will appear here.</p>
-          </div>
+          <div class="section-content" id="projectIdeas"></div>
         </div>
 
+        <!-- MISTAKES -->
         <div class="section">
-          <div class="section-title">Common Mistakes & Warnings</div>
-          <div class="section-content" id="commonMistakes">
-            <p class="placeholder">Typical pitfalls and safety notes will appear here.</p>
-          </div>
+          <div class="section-title">Common Mistakes / Warnings</div>
+          <div class="section-content" id="commonMistakes"></div>
         </div>
 
+        <!-- ASCII CIRCUIT -->
         <div class="section">
-          <div class="section-title">Datasheet Hint</div>
-          <div class="section-content" id="datasheetHint">
-            <p class="placeholder">ElectroLens will suggest a search phrase to quickly find the datasheet.</p>
+          <div class="section-title">Circuit Example (ASCII)</div>
+          <div class="ascii-box" id="asciiCircuit">
+            <span class="placeholder">No circuit generated yet.</span>
           </div>
         </div>
 
+        <!-- DATASHEET -->
         <div class="section">
           <div class="section-title">Datasheet & References</div>
-          <div class="section-content" id="referencesSection">
-            <p class="placeholder">
-              When available, a likely official datasheet and a few reference pages will appear here.
-            </p>
-          </div>
+          <div class="section-content" id="referencesSection"></div>
         </div>
 
+        <!-- ONLINE SHOPS -->
         <div class="section">
-          <div class="section-title">More on the Web</div>
-          <div class="section-content" id="webLinks">
-            <p class="placeholder">
-              Quick Google search shortcuts (circuits, pinouts, prices) will show here after analysis.
-            </p>
-          </div>
+          <div class="section-title">Buy Online</div>
+          <div class="shop-links" id="shopLinks"></div>
         </div>
 
+        <!-- REFERENCE IMAGE -->
         <div class="section">
           <div class="section-title">Reference Image</div>
-          <div class="section-content">
-            <img id="refImage" alt="Reference component image" />
+          <img id="refImage" style="max-width:100%; display:none; border-radius:8px; border:1px solid rgba(255,255,255,0.1);" />
+        </div>
+
+        <!-- CHAT MODE -->
+        <div class="chat-container">
+          <div class="chat-header" id="chatToggle">
+            <h3>Ask More About This Component</h3>
+            <span class="chat-toggle-icon">+</span>
+          </div>
+
+          <div class="chat-messages" id="chatMessages"></div>
+
+          <div class="chat-input-row" id="chatInputRow">
+            <input class="chat-input" id="chatInput" placeholder="Ask a question...">
+            <button class="chat-send" id="chatSendBtn">Send</button>
           </div>
         </div>
 
         <div class="status-bar">
-          <div style="display:flex;align-items:center;gap:6px;">
-            <div class="status-dot-ai"></div>
-            <div class="loader" id="globalLoader" style="display:none;"></div>
-            <span id="aiStatusText">Ready – choose a mode and analyze.</span>
-          </div>
-          <div class="tiny">
-            Your API keys stay on the server. Frontend only talks to <code>/api/electro-lookup</code>.
-          </div>
+          <span id="aiStatusText">Ready</span>
+          <div class="loader" id="globalLoader"></div>
         </div>
 
-        <div class="history" id="history"></div>
+        <div id="history" style="margin-top:10px;"></div>
+
       </div>
     </aside>
   </main>
+<script>
+/* ================================
+   DOM ELEMENTS
+=================================== */
+const modeTabs = document.querySelectorAll(".mode-tab");
+const modePanels = {
+  camera: document.getElementById("mode-camera"),
+  upload: document.getElementById("mode-upload"),
+  manual: document.getElementById("mode-manual")
+};
 
-  <script>
-    // DOM references
-    const modeTabs = document.querySelectorAll(".mode-tab");
-    const modePanels = {
-      camera: document.getElementById("mode-camera"),
-      upload: document.getElementById("mode-upload"),
-      manual: document.getElementById("mode-manual")
-    };
+const video = document.getElementById("camera");
+const cameraPreview = document.getElementById("cameraCapturePreview");
+const analyzeCameraBtn = document.getElementById("analyzeCameraBtn");
+const toggleCameraBtn = document.getElementById("toggleCameraBtn");
+const cameraStatusText = document.getElementById("cameraStatusText");
 
-    const video = document.getElementById("camera");
-    const cameraCapturePreview = document.getElementById("cameraCapturePreview");
-    const analyzeCameraBtn = document.getElementById("analyzeCameraBtn");
-    const toggleCameraBtn = document.getElementById("toggleCameraBtn");
-    const toggleCameraText = document.getElementById("toggleCameraText");
-    const cameraStatusText = document.getElementById("cameraStatusText");
-    const cameraDot = document.getElementById("cameraDot");
-    const lensText = document.getElementById("lensText");
+const fileInput = document.getElementById("fileInput");
+const uploadDropzone = document.getElementById("uploadDropzone");
+const uploadPrompt = document.getElementById("uploadPrompt");
+const uploadPreview = document.getElementById("uploadPreview");
+const analyzeUploadBtn = document.getElementById("analyzeUploadBtn");
 
-    const fileInput = document.getElementById("fileInput");
-    const uploadPreview = document.getElementById("uploadPreview");
-    const analyzeUploadBtn = document.getElementById("analyzeUploadBtn");
-    const dropzone = document.getElementById("uploadDropzone");
-    const uploadPrompt = document.getElementById("uploadPrompt");
+const manualInput = document.getElementById("manualInput");
+const manualSearchBtn = document.getElementById("manualSearchBtn");
 
-    const manualInput = document.getElementById("manualInput");
-    const manualSearchBtn = document.getElementById("manualSearchBtn");
+const canvas = document.getElementById("captureCanvas");
 
-    const canvas = document.getElementById("captureCanvas");
-    const deviceNameEl = document.getElementById("deviceName");
-    const deviceCategoryEl = document.getElementById("deviceCategory");
-    const descriptionEl = document.getElementById("description");
-    const typicalUsesEl = document.getElementById("typicalUses");
-    const whereToBuyEl = document.getElementById("whereToBuy");
-    const keySpecsEl = document.getElementById("keySpecs");
-    const projectIdeasEl = document.getElementById("projectIdeas");
-    const commonMistakesEl = document.getElementById("commonMistakes");
-    const datasheetHintEl = document.getElementById("datasheetHint");
-    const referencesEl = document.getElementById("referencesSection");
-    const webLinksEl = document.getElementById("webLinks");
-    const refImageEl = document.getElementById("refImage");
-    const aiStatusText = document.getElementById("aiStatusText");
-    const historyEl = document.getElementById("history");
-    const globalLoaderEl = document.getElementById("globalLoader");
+const deviceNameEl = document.getElementById("deviceName");
+const deviceCategoryEl = document.getElementById("deviceCategory");
+const descriptionEl = document.getElementById("description");
+const typicalUsesEl = document.getElementById("typicalUses");
+const keySpecsEl = document.getElementById("keySpecs");
+const projectIdeasEl = document.getElementById("projectIdeas");
+const commonMistakesEl = document.getElementById("commonMistakes");
+const asciiCircuitEl = document.getElementById("asciiCircuit");
+const referencesEl = document.getElementById("referencesSection");
+const shopLinksEl = document.getElementById("shopLinks");
+const refImageEl = document.getElementById("refImage");
 
-    let stream = null;
-    let cameraOn = false;
-    let analyzing = false;
-    let uploadImageDataUrl = null;
+const aiStatusText = document.getElementById("aiStatusText");
+const globalLoader = document.getElementById("globalLoader");
 
-    // ----- Mode switching -----
-    modeTabs.forEach(tab => {
-      tab.addEventListener("click", () => {
-        const mode = tab.dataset.mode;
-        modeTabs.forEach(t => t.classList.remove("active"));
-        tab.classList.add("active");
+const chatToggle = document.getElementById("chatToggle");
+const chatMessages = document.getElementById("chatMessages");
+const chatInputRow = document.getElementById("chatInputRow");
+const chatInput = document.getElementById("chatInput");
+const chatSendBtn = document.getElementById("chatSendBtn");
 
-        Object.keys(modePanels).forEach(key => {
-          modePanels[key].style.display = key === mode ? "block" : "none";
-        });
+let contextBlob = null;
+let analyzing = false;
+let cameraStream = null;
 
-        if (mode !== "camera" && cameraOn) {
-          stopCamera();
-        }
-      });
+/* ================================
+   MODE SWITCHING
+=================================== */
+modeTabs.forEach(tab => {
+  tab.addEventListener("click", () => {
+    const mode = tab.dataset.mode;
+
+    modeTabs.forEach(t => t.classList.remove("active"));
+    tab.classList.add("active");
+
+    Object.keys(modePanels).forEach(m => {
+      modePanels[m].style.display = m === mode ? "block" : "none";
     });
 
-    // ----- Camera -----
-    async function startCamera() {
-      try {
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-          cameraStatusText.textContent = "Camera not supported by this browser.";
-          return;
-        }
+    if (mode !== "camera") stopCamera();
+  });
+});
 
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment" },
-          audio: false
-        });
-        video.srcObject = stream;
-        cameraOn = true;
-        analyzeCameraBtn.disabled = false;
-        cameraDot.classList.add("on");
-        cameraStatusText.textContent = "Camera active";
-        lensText.textContent = "live";
-        toggleCameraText.textContent = "Stop camera";
-      } catch (err) {
-        console.error("Camera error:", err);
-        cameraStatusText.textContent = "Permission denied or no camera.";
-        lensText.textContent = "unavailable";
-        cameraDot.classList.remove("on");
-        analyzeCameraBtn.disabled = true;
-      }
-    }
-
-    function stopCamera() {
-      if (stream) {
-        stream.getTracks().forEach(t => t.stop());
-        stream = null;
-      }
-      video.srcObject = null;
-      cameraOn = false;
-      analyzeCameraBtn.disabled = true;
-      cameraDot.classList.remove("on");
-      cameraStatusText.textContent = "Camera stopped";
-      lensText.textContent = "idle";
-      toggleCameraText.textContent = "Start camera";
-      // hide any captured overlay
-      cameraCapturePreview.style.display = "none";
-    }
-
-    toggleCameraBtn.addEventListener("click", () => {
-      if (cameraOn) stopCamera();
-      else startCamera();
+/* ================================
+   CAMERA HANDLING
+=================================== */
+async function startCamera() {
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "environment" }
     });
 
-    analyzeCameraBtn.addEventListener("click", async () => {
-      if (!cameraOn || analyzing) return;
-      analyzing = true;
-      analyzeCameraBtn.disabled = true;
+    video.srcObject = cameraStream;
+    analyzeCameraBtn.disabled = false;
+    cameraStatusText.textContent = "Camera active";
+  } catch {
+    cameraStatusText.textContent = "Camera permission denied";
+  }
+}
 
-      // Capture current frame to canvas & data URL
-      const width = video.videoWidth || 640;
-      const height = video.videoHeight || 480;
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext("2d");
-      ctx.drawImage(video, 0, 0, width, height);
-      const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
+function stopCamera() {
+  if (cameraStream) {
+    cameraStream.getTracks().forEach(t => t.stop());
+    cameraStream = null;
+  }
+  video.srcObject = null;
+  analyzeCameraBtn.disabled = true;
+  cameraPreview.style.display = "none";
+  cameraStatusText.textContent = "Camera stopped";
+}
 
-      // Show captured still image overlay and status text
-      cameraCapturePreview.src = dataUrl;
-      cameraCapturePreview.style.display = "block";
-      cameraStatusText.textContent = "Frame captured – analyzing…";
-      lensText.textContent = "analyzing";
-      aiStatusText.textContent = "Captured frame and asking ElectroLens…";
+toggleCameraBtn.addEventListener("click", () => {
+  if (cameraStream) stopCamera();
+  else startCamera();
+});
 
-      await queryElectroLens({ image: dataUrl, queryText: "" }, "camera");
+/* CAPTURE FRAME */
+analyzeCameraBtn.addEventListener("click", async () => {
+  if (!cameraStream || analyzing) return;
 
-      analyzing = false;
-      analyzeCameraBtn.disabled = !cameraOn;
+  const w = video.videoWidth;
+  const h = video.videoHeight;
+  canvas.width = w;
+  canvas.height = h;
+  canvas.getContext("2d").drawImage(video, 0, 0, w, h);
+
+  const dataURL = canvas.toDataURL("image/jpeg", 0.85);
+  cameraPreview.src = dataURL;
+  cameraPreview.style.display = "block";
+
+  await analyzeImage(dataURL);
+});
+
+/* ================================
+   UPLOAD HANDLING
+=================================== */
+uploadDropzone.addEventListener("click", () => fileInput.click());
+
+fileInput.addEventListener("change", handleFile);
+uploadDropzone.addEventListener("dragover", e => {
+  e.preventDefault();
+  uploadDropzone.classList.add("dragover");
+});
+uploadDropzone.addEventListener("dragleave", e => {
+  uploadDropzone.classList.remove("dragover");
+});
+uploadDropzone.addEventListener("drop", e => {
+  e.preventDefault();
+  uploadDropzone.classList.remove("dragover");
+  handleFile({ target: { files: e.dataTransfer.files } });
+});
+
+function handleFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = async evt => {
+    const dataURL = evt.target.result;
+    uploadPreview.src = dataURL;
+    uploadPreview.style.display = "block";
+    uploadPrompt.style.display = "none";
+    analyzeUploadBtn.disabled = false;
+
+    analyzeUploadBtn.onclick = () => analyzeImage(dataURL);
+  };
+  reader.readAsDataURL(file);
+}
+
+/* ================================
+   MANUAL SEARCH
+=================================== */
+manualSearchBtn.addEventListener("click", () => {
+  const text = manualInput.value.trim();
+  if (text) analyzeImage(null, text);
+});
+
+/* ================================
+   CORE ANALYSIS FUNCTION
+=================================== */
+async function analyzeImage(imageDataURL = null, textQuery = null) {
+  if (analyzing) return;
+  analyzing = true;
+  globalLoader.style.display = "inline-block";
+  aiStatusText.textContent = "Analyzing…";
+
+  try {
+    const res = await fetch("/api/electro-lookup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        image: imageDataURL,
+        queryText: textQuery
+      })
     });
 
-    // ----- Upload (click-to-select) -----
-    dropzone.addEventListener("click", () => {
-      fileInput.click();
+    const data = await res.json();
+    contextBlob = data.context_blob;
+
+    renderResult(data);
+    aiStatusText.textContent = "Done";
+  } catch (err) {
+    console.error(err);
+    aiStatusText.textContent = "Error";
+  }
+
+  analyzing = false;
+  globalLoader.style.display = "none";
+}
+
+/* ================================
+   RENDER RESULT
+=================================== */
+function renderList(el, arr) {
+  el.innerHTML = "";
+  if (!arr?.length) {
+    el.innerHTML = `<p class="placeholder">No data</p>`;
+    return;
+  }
+
+  const ul = document.createElement("ul");
+  arr.forEach(x => {
+    const li = document.createElement("li");
+    li.textContent = x;
+    ul.appendChild(li);
+  });
+
+  el.appendChild(ul);
+}
+
+function renderResult(r) {
+  deviceNameEl.textContent = r.name || "Unknown device";
+  deviceCategoryEl.textContent = r.category || "";
+
+  descriptionEl.textContent = r.description || "";
+
+  renderList(typicalUsesEl, r.typical_uses);
+  renderList(keySpecsEl, r.key_specs);
+  renderList(projectIdeasEl, r.project_ideas);
+  renderList(commonMistakesEl, r.common_mistakes);
+
+  /* ASCII Circuit */
+  asciiCircuitEl.textContent =
+    r.circuit_ascii || "No ASCII circuit provided.";
+
+  /* Datasheet & references */
+  referencesEl.innerHTML = "";
+  if (r.datasheet_url) {
+    referencesEl.innerHTML += `<a href="${r.datasheet_url}" target="_blank" class="shop-btn">📄 Datasheet</a><br><br>`;
+  }
+  (r.references || []).forEach(ref => {
+    referencesEl.innerHTML += `<p><a href="${ref.url}" target="_blank" class="ref-link">${ref.title}</a><br><span class="ref-snippet">${ref.snippet}</span></p>`;
+  });
+
+  /* Shop links */
+  shopLinksEl.innerHTML = "";
+  if (r.shop_links) {
+    shopLinksEl.innerHTML += `
+      <a class="shop-btn" href="${r.shop_links.shopee}" target="_blank">Shopee</a>
+      <a class="shop-btn" href="${r.shop_links.lazada}" target="_blank">Lazada</a>
+      <a class="shop-btn" href="${r.shop_links.amazon}" target="_blank">Amazon</a>
+      <a class="shop-btn" href="${r.shop_links.aliexpress}" target="_blank">AliExpress</a>
+    `;
+  }
+  if (r.official_store) {
+    shopLinksEl.innerHTML += `
+      <a class="shop-btn" href="${r.official_store}" target="_blank">Official Store</a>
+    `;
+  }
+
+  /* Reference image */
+  if (r.real_image) {
+    refImageEl.src = r.real_image;
+    refImageEl.style.display = "block";
+  } else {
+    refImageEl.style.display = "none";
+  }
+}
+
+/* ================================
+   CHAT MODE
+=================================== */
+let chatOpen = false;
+
+chatToggle.addEventListener("click", () => {
+  chatOpen = !chatOpen;
+  chatMessages.style.display = chatOpen ? "block" : "none";
+  chatInputRow.style.display = chatOpen ? "flex" : "none";
+  chatToggle.querySelector(".chat-toggle-icon").textContent = chatOpen ? "−" : "+";
+});
+
+function appendMessage(text, isUser = false) {
+  const div = document.createElement("div");
+  div.className = "msg " + (isUser ? "msg-user" : "msg-ai");
+  div.textContent = text;
+  chatMessages.appendChild(div);
+
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+chatSendBtn.addEventListener("click", sendChat);
+
+async function sendChat() {
+  const msg = chatInput.value.trim();
+  if (!msg || !contextBlob) return;
+
+  appendMessage(msg, true);
+  chatInput.value = "";
+  chatSendBtn.disabled = true;
+
+  globalLoader.style.display = "inline-block";
+
+  try {
+    const res = await fetch("/api/chat", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({
+        message: msg,
+        context_blob: contextBlob
+      })
     });
 
-    fileInput.addEventListener("change", () => {
-      const file = fileInput.files && fileInput.files[0];
-      if (!file) {
-        uploadImageDataUrl = null;
-        uploadPreview.style.display = "none";
-        uploadPrompt.style.display = "block";
-        analyzeUploadBtn.disabled = true;
-        return;
-      }
+    const data = await res.json();
+    appendMessage(data.reply, false);
+  } catch (err) {
+    appendMessage("Error: Could not get reply.", false);
+  }
 
-      const reader = new FileReader();
-      reader.onload = e => {
-        uploadImageDataUrl = e.target.result;
-        uploadPreview.src = uploadImageDataUrl;
-        uploadPreview.style.display = "block";
-        uploadPrompt.style.display = "none";
-        analyzeUploadBtn.disabled = false;
-      };
-      reader.readAsDataURL(file);
-    });
-
-    analyzeUploadBtn.addEventListener("click", async () => {
-      if (!uploadImageDataUrl || analyzing) return;
-      analyzing = true;
-      analyzeUploadBtn.disabled = true;
-
-      aiStatusText.textContent = "Analyzing uploaded image…";
-      await queryElectroLens({ image: uploadImageDataUrl, queryText: "" }, "upload");
-
-      analyzing = false;
-      analyzeUploadBtn.disabled = false;
-    });
-
-    // ----- Upload (Drag & Drop) -----
-    dropzone.addEventListener("dragover", (e) => {
-      e.preventDefault();
-      dropzone.classList.add("dragover");
-    });
-
-    dropzone.addEventListener("dragleave", (e) => {
-      e.preventDefault();
-      if (!dropzone.contains(e.relatedTarget)) {
-        dropzone.classList.remove("dragover");
-      }
-    });
-
-    dropzone.addEventListener("drop", async (e) => {
-      e.preventDefault();
-      dropzone.classList.remove("dragover");
-      const file = e.dataTransfer.files && e.dataTransfer.files[0];
-      if (!file || analyzing) return;
-
-      const reader = new FileReader();
-      reader.onload = async (evt) => {
-        uploadImageDataUrl = evt.target.result;
-        uploadPreview.src = uploadImageDataUrl;
-        uploadPreview.style.display = "block";
-        uploadPrompt.style.display = "none";
-        analyzeUploadBtn.disabled = true; // will be re-enabled after
-
-        // Auto-analyze when dropped
-        analyzing = true;
-        aiStatusText.textContent = "Image dropped – analyzing with ElectroLens…";
-        await queryElectroLens({ image: uploadImageDataUrl, queryText: "" }, "upload");
-        analyzing = false;
-        analyzeUploadBtn.disabled = false;
-      };
-      reader.readAsDataURL(file);
-    });
-
-    // ----- Manual search -----
-    manualSearchBtn.addEventListener("click", async () => {
-      const text = manualInput.value.trim();
-      if (!text || analyzing) return;
-      analyzing = true;
-      manualSearchBtn.disabled = true;
-
-      aiStatusText.textContent = "Looking up this electronics item in ElectroLens…";
-      await queryElectroLens({ image: null, queryText: text }, "manual");
-
-      analyzing = false;
-      manualSearchBtn.disabled = false;
-    });
-
-    manualInput.addEventListener("keypress", e => {
-      if (e.key === "Enter") {
-        manualSearchBtn.click();
-      }
-    });
-
-    // ----- Common API call -----
-    async function queryElectroLens(payload, source) {
-      try {
-        // show loading spinner
-        globalLoaderEl.style.display = "inline-block";
-
-        const res = await fetch("/api/electro-lookup", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        });
-
-        if (!res.ok) throw new Error("Backend error");
-        const json = await res.json();
-        renderResult(json, payload.queryText || "");
-        addToHistory(json, payload.queryText || "");
-        aiStatusText.textContent = "Done – analyze another component or tool.";
-      } catch (err) {
-        console.error(err);
-        descriptionEl.innerHTML =
-          '<p class="error">Failed to analyze. Check server logs or your API key.</p>';
-        aiStatusText.textContent = "Error – see console/server logs.";
-      } finally {
-        // hide loading spinner
-        globalLoaderEl.style.display = "none";
-
-        // after AI + image search is done, restore camera view if we came from camera
-        if (source === "camera") {
-          if (cameraOn) {
-            cameraCapturePreview.style.display = "none"; // hide frozen frame
-            cameraStatusText.textContent = "Camera active";
-            lensText.textContent = "live";
-          } else {
-            cameraCapturePreview.style.display = "none";
-          }
-        }
-      }
-    }
-
-    // ----- Render result -----
-    function renderResult(result, queryText) {
-      const {
-        name,
-        category,
-        description,
-        typical_uses,
-        where_to_buy,
-        key_specs,
-        datasheet_hint,
-        real_image,
-        datasheet_url,
-        references,
-        project_ideas,
-        common_mistakes
-      } = result;
-
-      const searchTerm =
-        name && name !== "Unknown device"
-          ? name
-          : queryText && queryText.trim().length > 0
-          ? queryText.trim()
-          : "";
-
-      deviceNameEl.textContent = name || "Unknown device";
-      deviceCategoryEl.textContent = category || "Other";
-
-      // Description
-      descriptionEl.innerHTML = "";
-      const p = document.createElement("p");
-      p.textContent = description || "No description.";
-      descriptionEl.appendChild(p);
-
-      // Typical uses
-      typicalUsesEl.innerHTML = "";
-      if (Array.isArray(typical_uses) && typical_uses.length > 0) {
-        const ul = document.createElement("ul");
-        typical_uses.forEach(u => {
-          const li = document.createElement("li");
-          li.textContent = u;
-          ul.appendChild(li);
-        });
-        typicalUsesEl.appendChild(ul);
-      } else {
-        typicalUsesEl.innerHTML =
-          '<p class="placeholder">No typical uses listed.</p>';
-      }
-
-      // Where to buy
-      whereToBuyEl.innerHTML = "";
-      if (Array.isArray(where_to_buy) && where_to_buy.length > 0) {
-        const ul = document.createElement("ul");
-        where_to_buy.forEach(w => {
-          const li = document.createElement("li");
-          li.textContent = w;
-          ul.appendChild(li);
-        });
-        whereToBuyEl.appendChild(ul);
-      } else {
-        whereToBuyEl.innerHTML =
-          '<p class="placeholder">No buying sources listed.</p>';
-      }
-
-      // Key specs
-      keySpecsEl.innerHTML = "";
-      if (Array.isArray(key_specs) && key_specs.length > 0) {
-        const ul = document.createElement("ul");
-        key_specs.forEach(s => {
-          const li = document.createElement("li");
-          li.textContent = s;
-          ul.appendChild(li);
-        });
-        keySpecsEl.appendChild(ul);
-      } else {
-        keySpecsEl.innerHTML =
-          '<p class="placeholder">No key specs listed.</p>';
-      }
-
-      // Project ideas
-      projectIdeasEl.innerHTML = "";
-      if (Array.isArray(project_ideas) && project_ideas.length > 0) {
-        const ul = document.createElement("ul");
-        project_ideas.forEach(idea => {
-          const li = document.createElement("li");
-          li.textContent = idea;
-          ul.appendChild(li);
-        });
-        projectIdeasEl.appendChild(ul);
-      } else {
-        projectIdeasEl.innerHTML =
-          '<p class="placeholder">No project ideas generated.</p>';
-      }
-
-      // Common mistakes
-      commonMistakesEl.innerHTML = "";
-      if (Array.isArray(common_mistakes) && common_mistakes.length > 0) {
-        const ul = document.createElement("ul");
-        common_mistakes.forEach(m => {
-          const li = document.createElement("li");
-          li.textContent = m;
-          ul.appendChild(li);
-        });
-        commonMistakesEl.appendChild(ul);
-      } else {
-        commonMistakesEl.innerHTML =
-          '<p class="placeholder">No common mistakes listed.</p>';
-      }
-
-      // Datasheet hint
-      datasheetHintEl.innerHTML = "";
-      const dh = document.createElement("p");
-      dh.textContent =
-        datasheet_hint ||
-        "Search for the device name + 'datasheet' in your browser.";
-      datasheetHintEl.appendChild(dh);
-
-      // Datasheet + references
-      referencesEl.innerHTML = "";
-
-      if (datasheet_url) {
-        const a = document.createElement("a");
-        a.href = datasheet_url;
-        a.target = "_blank";
-        a.rel = "noopener noreferrer";
-        a.className = "datasheet-link";
-        a.innerHTML = "📄 Open datasheet (likely official)";
-        referencesEl.appendChild(a);
-      }
-
-      if (Array.isArray(references) && references.length > 0) {
-        const ul = document.createElement("ul");
-        references.forEach(ref => {
-          const li = document.createElement("li");
-          const link = document.createElement("a");
-          link.href = ref.url;
-          link.target = "_blank";
-          link.rel = "noopener noreferrer";
-          link.className = "ref-link";
-          link.textContent = ref.title || ref.url;
-          li.appendChild(link);
-          if (ref.snippet) {
-            const sn = document.createElement("div");
-            sn.className = "ref-snippet";
-            sn.textContent = ref.snippet;
-            li.appendChild(sn);
-          }
-          ul.appendChild(li);
-        });
-        referencesEl.appendChild(ul);
-      } else if (!datasheet_url) {
-        referencesEl.innerHTML =
-          '<p class="placeholder">No external references found.</p>';
-      }
-
-      // Smart Google buttons
-      webLinksEl.innerHTML = "";
-      if (searchTerm) {
-        const row = document.createElement("div");
-        row.className = "web-links-row";
-
-        const mkBtn = (label, url, emoji) => {
-          const a = document.createElement("a");
-          a.href = url;
-          a.target = "_blank";
-          a.rel = "noopener noreferrer";
-          a.className = "web-link-btn";
-          a.innerHTML = `${emoji} ${label}`;
-          return a;
-        };
-
-        const qCircuit = encodeURIComponent(searchTerm + " application circuit");
-        const qPinout = encodeURIComponent(searchTerm + " pinout");
-        const qPrice = encodeURIComponent(searchTerm + " price Philippines");
-
-        row.appendChild(
-          mkBtn(
-            "Circuit examples",
-            `https://www.google.com/search?q=${qCircuit}`,
-            "🧩"
-          )
-        );
-        row.appendChild(
-          mkBtn(
-            "Pinout images",
-            `https://www.google.com/search?tbm=isch&q=${qPinout}`,
-            "📷"
-          )
-        );
-        row.appendChild(
-          mkBtn(
-            "Prices",
-            `https://www.google.com/search?q=${qPrice}`,
-            "🛒"
-          )
-        );
-
-        webLinksEl.appendChild(row);
-      } else {
-        webLinksEl.innerHTML =
-          '<p class="placeholder">Search again with a clearer name to get web shortcuts.</p>';
-      }
-
-      // Reference image from Google (real_image URL)
-      if (real_image) {
-        refImageEl.src = real_image;
-        refImageEl.style.display = "block";
-      } else {
-        refImageEl.src = "";
-        refImageEl.style.display = "none";
-      }
-    }
-
-    // ----- History -----
-    function addToHistory(result, queryText) {
-      const item = document.createElement("div");
-      item.className = "history-item";
-
-      const t = document.createElement("div");
-      t.className = "time";
-      t.textContent = new Date().toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit"
-      });
-
-      const s = document.createElement("div");
-      s.className = "summary";
-      const base = result.name || "Unknown device";
-      const modeInfo = queryText
-        ? ` (search: ${queryText.slice(0, 35)}${queryText.length > 35 ? "…" : ""})`
-        : "";
-      s.textContent = base + modeInfo;
-
-      item.appendChild(t);
-      item.appendChild(s);
-      historyEl.insertBefore(item, historyEl.firstChild);
-    }
-
-    // Try to auto-start camera on load
-    window.addEventListener("load", () => {
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        cameraStatusText.textContent = "Requesting camera access…";
-        startCamera();
-      } else {
-        cameraStatusText.textContent = "Camera not supported on this device.";
-      }
-    });
-  </script>
+  chatSendBtn.disabled = false;
+  globalLoader.style.display = "none";
+}
+</script>
 </body>
 </html>
