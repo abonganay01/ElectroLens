@@ -41,7 +41,7 @@ async function googleImageSearch(query) {
   try {
     const res = await fetch(url);
     if (!res.ok) {
-      console.error("Image search HTTP error:", res.status);
+      console.error("Image search HTTP error (Google):", res.status);
       return null;
     }
     const data = await res.json();
@@ -52,20 +52,60 @@ async function googleImageSearch(query) {
   }
 }
 
+// ========== Bing Image Search (fallback) ==========
+
+async function bingImageSearch(query) {
+  const bingKey = process.env.BING_API_KEY;
+  if (!bingKey || !query) return null;
+
+  const url = `https://api.bing.microsoft.com/v7.0/images/search?q=${encodeURIComponent(
+    query
+  )}&safeSearch=Moderate`;
+
+  try {
+    const res = await fetch(url, {
+      headers: { "Ocp-Apim-Subscription-Key": bingKey }
+    });
+    if (!res.ok) {
+      console.error("Image search HTTP error (Bing):", res.status);
+      return null;
+    }
+    const data = await res.json();
+    return data.value?.[0]?.contentUrl || null;
+  } catch (err) {
+    console.error("Bing image search error:", err);
+    return null;
+  }
+}
+
+// unified helper: Google first, then Bing
+async function smartImageSearch(query) {
+  if (!query) return null;
+
+  // Try Google first
+  let url = await googleImageSearch(query);
+  if (url) return url;
+
+  console.warn("Google image search failed or quota exceeded – falling back to Bing.");
+  url = await bingImageSearch(query);
+  return url || null;
+}
+
+// Wrappers that keep your original function names
 async function fetchRealImageFromGoogle(nameOrQuery) {
-  return googleImageSearch(nameOrQuery);
+  return smartImageSearch(nameOrQuery);
 }
 
 async function fetchUsageImageFromGoogle(nameOrQuery) {
   // try to get an application / example circuit image
   const q = `${nameOrQuery} application circuit electronics example`;
-  return googleImageSearch(q);
+  return smartImageSearch(q);
 }
 
 async function fetchPinoutImageFromGoogle(nameOrQuery) {
   // try to get a pinout diagram
   const q = `${nameOrQuery} pinout diagram`;
-  return googleImageSearch(q);
+  return smartImageSearch(q);
 }
 
 async function fetchDatasheetAndReferences(name) {
@@ -344,7 +384,7 @@ Return STRICT JSON ONLY in this shape:
       safeQueryText ||
       "electronics component";
 
-    // Images from Google
+    // Images (Google first, Bing fallback via smartImageSearch)
     baseJson.real_image = await fetchRealImageFromGoogle(nameOrQuery);
     baseJson.usage_image = await fetchUsageImageFromGoogle(nameOrQuery);
     baseJson.pinout_image = await fetchPinoutImageFromGoogle(nameOrQuery);
