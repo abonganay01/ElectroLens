@@ -37,6 +37,7 @@
       display: grid;
       grid-template-columns: minmax(0, 1.05fr) minmax(0, 1.55fr); /* more space for encyclopedia */
       gap: 20px;
+      align-items: flex-start; /* 🔥 prevents cards stretching to full row height */
     }
 
     @media (max-width: 1000px) {
@@ -82,10 +83,11 @@
       background: rgba(15, 23, 42, 0.98);
     }
 
+    /* ⬇️ Let encyclopedia content decide height; no forced scroll */
     .side-inner {
       padding: 18px 18px 14px;
-      max-height: calc(100vh - 48px);
-      overflow-y: auto;
+      max-height: none;
+      overflow-y: visible;
     }
 
     .badge {
@@ -697,7 +699,7 @@
 
     @media (max-width: 700px) {
       .side-inner {
-        max-height: none;
+        padding-bottom: 16px;
       }
     }
   </style>
