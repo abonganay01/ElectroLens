@@ -10,11 +10,9 @@
       --bg: #020617;
       --card: #02091a;
       --accent: #6366f1;
-      --accent-soft: rgba(99, 102, 241, 0.18);
       --border: rgba(148,163,184,0.35);
       --text: #e5e7eb;
       --muted: #9ca3af;
-      --danger: #fca5a5;
       --radius-lg: 18px;
       --radius-md: 12px;
     }
@@ -38,10 +36,10 @@
 
     .shell {
       width: 100%;
-      max-width: 1280px;
+      max-width: 1200px;
       display: flex;
       flex-direction: column;
-      gap: 20px;
+      gap: 18px;
     }
 
     /* HEADER */
@@ -87,184 +85,64 @@
       color: var(--muted);
     }
 
-    .nav-links {
-      display: flex;
-      gap: 14px;
-      font-size: 13px;
-      color: var(--muted);
-    }
-
-    .nav-links span {
-      cursor: default;
-      opacity: 0.85;
-    }
-
-    /* HERO + APP */
-    .hero-layout {
-      display: grid;
-      grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.5fr);
-      gap: 20px;
-      align-items: stretch;
-    }
-
-    @media (max-width: 900px) {
-      .hero-layout {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    .hero-panel {
-      border-radius: var(--radius-lg);
-      border: 1px solid var(--border);
-      background: radial-gradient(circle at top left, #020617, #020617 55%, #020617);
-      padding: 18px 18px 16px;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .hero-panel::before {
-      content: "";
-      position: absolute;
-      inset: -40%;
-      background:
-        radial-gradient(circle at 0 0, rgba(129,140,248,0.25), transparent 60%),
-        radial-gradient(circle at 100% 0, rgba(45,212,191,0.18), transparent 60%);
-      opacity: 0.7;
-      pointer-events: none;
-    }
-
-    .hero-inner {
-      position: relative;
-      z-index: 1;
-    }
-
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 4px 10px;
-      border-radius: 999px;
-      border: 1px solid var(--border);
-      background: rgba(15,23,42,0.9);
-      color: var(--muted);
-      font-size: 11px;
-      margin-bottom: 10px;
-    }
-
-    .badge-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #22c55e;
-      box-shadow: 0 0 10px rgba(34,197,94,0.9);
-    }
-
-    h1.hero-title {
-      font-size: clamp(24px, 2.4vw, 28px);
-      line-height: 1.15;
-      margin-bottom: 6px;
-    }
-
-    h1.hero-title span {
-      background: linear-gradient(120deg, #818cf8, #22d3ee);
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
-    }
-
-    .hero-text {
-      font-size: 13px;
-      color: var(--muted);
-      margin-bottom: 12px;
-      max-width: 520px;
-    }
-
-    .hero-pills {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-bottom: 14px;
-    }
-
-    .hero-pill {
-      font-size: 11px;
-      padding: 4px 9px;
-      border-radius: 999px;
-      border: 1px solid rgba(148,163,184,0.6);
-      background: rgba(15,23,42,0.96);
-      color: #cbd5f5;
-    }
-
-    .hero-highlight-box {
-      margin-top: 10px;
-      padding: 10px;
-      border-radius: 14px;
-      border: 1px dashed rgba(148,163,184,0.6);
-      background: rgba(15,23,42,0.9);
+    .nav-hint {
       font-size: 12px;
       color: var(--muted);
     }
 
-    .hero-highlight-box b {
-      color: #e5e7eb;
-    }
-
-    /* APP PANEL (SCANNER + ENCYCLOPEDIA) */
-    .app-panel {
-      border-radius: var(--radius-lg);
-      border: 1px solid var(--border);
-      background: rgba(15,23,42,0.98);
-      padding: 16px;
+    /* MAIN DASHBOARD */
+    .page {
       display: grid;
-      grid-template-columns: minmax(0, 1.05fr) minmax(0, 1.6fr);
-      gap: 14px;
+      grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.4fr);
+      gap: 18px;
       align-items: flex-start;
     }
 
-    @media (max-width: 1000px) {
-      .app-panel {
+    @media (max-width: 900px) {
+      .page {
         grid-template-columns: 1fr;
       }
     }
 
     .card {
-      border-radius: var(--radius-md);
+      border-radius: var(--radius-lg);
       border: 1px solid var(--border);
-      background: rgba(15,23,42,0.96);
-      padding: 12px 12px 10px;
+      background: rgba(15,23,42,0.98);
+      padding: 14px;
+      box-shadow: 0 20px 40px rgba(15,23,42,0.85);
     }
 
-    .card-title-row {
+    .card-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 6px;
+      margin-bottom: 8px;
     }
 
     .card-title {
       font-size: 13px;
       text-transform: uppercase;
-      letter-spacing: 0.16em;
+      letter-spacing: 0.14em;
       color: var(--muted);
     }
 
     .card-tag {
       font-size: 11px;
-      padding: 3px 7px;
+      padding: 3px 8px;
       border-radius: 999px;
-      background: rgba(15,23,42,1);
       border: 1px solid rgba(148,163,184,0.6);
-      color: #c7d2fe;
+      background: rgba(15,23,42,1);
+      color: #cbd5f5;
     }
 
-    /* INPUT MODES */
+    /* MODE TABS */
     .mode-tabs {
       display: inline-flex;
       border-radius: 999px;
       border: 1px solid var(--border);
       background: rgba(15,23,42,0.96);
       padding: 3px;
-      margin-bottom: 8px;
+      margin-bottom: 10px;
     }
 
     .mode-tab {
@@ -289,7 +167,7 @@
 
     /* CAMERA */
     .camera-shell {
-      border-radius: 12px;
+      border-radius: var(--radius-md);
       border: 1px solid var(--border);
       background: rgba(15,23,42,0.7);
       padding: 10px;
@@ -369,11 +247,11 @@
 
     /* UPLOAD */
     .upload-dropzone {
-      border-radius: 12px;
+      border-radius: var(--radius-md);
       border: 2px dashed rgba(148,163,184,0.45);
       background: rgba(15,23,42,0.65);
-      padding: 24px;
-      min-height: 200px;
+      padding: 22px;
+      min-height: 190px;
       text-align: center;
       cursor: pointer;
       position: relative;
@@ -576,40 +454,11 @@
       to { transform: rotate(360deg); }
     }
 
-    /* INFO STRIP */
-    .info-strip {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 14px;
-    }
-
-    @media (max-width: 900px) {
-      .info-strip {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    .info-card {
-      border-radius: var(--radius-md);
-      border: 1px solid var(--border);
-      background: rgba(15,23,42,0.96);
-      padding: 10px 12px;
-      font-size: 12px;
-      color: var(--muted);
-    }
-
-    .info-card h3 {
-      font-size: 13px;
-      margin-bottom: 4px;
-      color: #e5e7eb;
-    }
-
-    /* FOOTER */
     footer {
       text-align: center;
       font-size: 12px;
       color: var(--muted);
-      margin-top: 8px;
+      margin-top: 4px;
       padding-top: 6px;
       border-top: 1px solid rgba(15,23,42,0.8);
       opacity: 0.85;
@@ -624,249 +473,193 @@
         <div class="logo-placeholder">⚡</div>
         <div>
           <div class="brand-title">
-            <span class="brand-highlight">ElectroLens</span> AI
+            <span class="brand-highlight">ElectroLens</span> – AI Electronics Encyclopedia
           </div>
           <div class="brand-subtitle">
-            Vision-powered electronics encyclopedia for engineers & students
+            Identify components, read specs, and find where to buy using Gemini + Groq + Google.
           </div>
         </div>
       </div>
-      <nav class="nav-links">
-        <span>How it works</span>
-        <span>Components</span>
-        <span>About</span>
-      </nav>
+      <div class="nav-hint">
+        Dashboard · Camera · Upload · Manual Search
+      </div>
     </header>
 
-    <!-- HERO + APP -->
-    <section class="hero-layout">
-      <!-- HERO PANEL -->
-      <div class="hero-panel">
-        <div class="hero-inner">
-          <div class="badge">
-            <span class="badge-dot"></span>
-            Live lab assistant · Gemini + Groq + Google
-          </div>
-          <h1 class="hero-title">
-            Turn your bench into an <span>AI electronics lab guide.</span>
-          </h1>
-          <p class="hero-text">
-            Snap a photo of a component or type its name. ElectroLens identifies the device, pulls real images,
-            suggests where to buy, and explains how to use it like an electronics engineer’s encyclopedia.
-          </p>
-          <div class="hero-pills">
-            <span class="hero-pill">📷 Camera & image upload</span>
-            <span class="hero-pill">📚 Specs, uses & warnings</span>
-            <span class="hero-pill">🛒 Links to real shops</span>
-          </div>
+    <!-- DASHBOARD -->
+    <main class="page">
+      <!-- LEFT: INPUT PANEL -->
+      <section class="card">
+        <div class="card-header">
+          <div class="card-title">Input</div>
+          <div class="card-tag">Scanner</div>
+        </div>
 
-          <div class="hero-highlight-box">
-            <b>Tip for demos:</b> Try ESP32 dev board, LM7805 regulator, a relay module, or a multimeter photo to see
-            how ElectroLens explains each like a lab instructor.
+        <div class="mode-tabs">
+          <button class="mode-tab active" data-mode="camera">📷 Camera</button>
+          <button class="mode-tab" data-mode="upload">🖼 Upload</button>
+          <button class="mode-tab" data-mode="manual">🔍 Type Name</button>
+        </div>
+
+        <!-- CAMERA MODE -->
+        <div class="mode-panel" id="mode-camera">
+          <div class="camera-shell">
+            <div class="glass-frame">
+              <video id="camera" autoplay playsinline></video>
+              <img id="cameraCapturePreview" alt="Captured frame" />
+              <div class="camera-status">
+                <span id="cameraStatusText">Waiting for permission…</span>
+              </div>
+            </div>
+          </div>
+          <div class="input-controls">
+            <button class="primary-btn" id="analyzeCameraBtn" disabled>🔍 Analyze frame</button>
+            <button class="primary-btn" id="toggleCameraBtn">▶ Start camera</button>
+          </div>
+          <p class="hint">
+            Center a single component or dev board with good lighting for best identification.
+          </p>
+        </div>
+
+        <!-- UPLOAD MODE -->
+        <div class="mode-panel" id="mode-upload" style="display:none;">
+          <div class="upload-dropzone" id="uploadDropzone">
+            <div id="uploadPrompt">
+              <div class="upload-icon">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path d="M7 17H5a2 2 0 0 1-2-2V9"></path>
+                  <path d="M21 9v6a2 2 0 0 1-2 2h-2"></path>
+                  <path d="M12 3v10"></path>
+                  <path d="M8.5 6.5L12 3l3.5 3.5"></path>
+                  <rect x="7" y="17" width="10" height="4" rx="1"></rect>
+                </svg>
+              </div>
+              <div class="upload-text">
+                Drag & drop or click to upload an image
+              </div>
+            </div>
+            <img id="uploadPreview" alt="Upload preview" />
+            <input type="file" id="fileInput" accept="image/*" hidden />
+          </div>
+          <div class="input-controls">
+            <button class="primary-btn" id="analyzeUploadBtn" disabled>🔍 Analyze image</button>
+          </div>
+          <p class="hint">
+            Works well with pictures of dev boards, ICs, modules, tools, and test equipment.
+          </p>
+        </div>
+
+        <!-- MANUAL MODE -->
+        <div class="mode-panel" id="mode-manual" style="display:none;">
+          <p class="hint">
+            Type a part number or name (e.g. <i>ESP32 DevKitC, LM7805, 2N2222, HC-SR04</i>).
+          </p>
+          <div class="manual-input-row">
+            <input id="manualInput" type="text"
+                   placeholder="e.g. ESP32 DevKitC, LM7805, 10kΩ resistor 1/4W">
+            <button class="primary-btn" id="manualSearchBtn">Go</button>
           </div>
         </div>
-      </div>
 
-      <!-- APP PANEL -->
-      <div class="app-panel">
-        <!-- LEFT: INPUT CARD -->
-        <section class="card">
-          <div class="card-title-row">
-            <div class="card-title">Input</div>
-            <div class="card-tag">Scanner</div>
+        <canvas id="captureCanvas" style="display:none;"></canvas>
+      </section>
+
+      <!-- RIGHT: ENCYCLOPEDIA PANEL -->
+      <section class="card">
+        <div class="ency-header">
+          <div class="ency-title">ElectroLens Encyclopedia</div>
+          <div class="ency-badges">
+            <span class="ency-chip">Gemini Vision</span>
+            <span class="ency-chip">Groq Mixtral</span>
+            <span class="ency-chip">Google Search</span>
           </div>
+        </div>
 
-          <div class="mode-tabs">
-            <button class="mode-tab active" data-mode="camera">📷 Camera</button>
-            <button class="mode-tab" data-mode="upload">🖼 Upload</button>
-            <button class="mode-tab" data-mode="manual">🔍 Type Name</button>
-          </div>
+        <div class="name-row">
+          <div class="device-name" id="deviceName">No device analyzed yet</div>
+          <div class="device-category" id="deviceCategory">—</div>
+        </div>
 
-          <!-- CAMERA MODE -->
-          <div class="mode-panel" id="mode-camera">
-            <div class="camera-shell">
-              <div class="glass-frame">
-                <video id="camera" autoplay playsinline></video>
-                <img id="cameraCapturePreview" alt="Captured frame" />
-                <div class="camera-status">
-                  <span id="cameraStatusText">Waiting for permission…</span>
-                </div>
-              </div>
-            </div>
-            <div class="input-controls">
-              <button class="primary-btn" id="analyzeCameraBtn" disabled>🔍 Analyze frame</button>
-              <button class="primary-btn" id="toggleCameraBtn">▶ Start camera</button>
-            </div>
-            <p class="hint">
-              Hold a single component in the center of the frame with good lighting for best results.
+        <div class="section">
+          <div class="section-title">Overview</div>
+          <div class="section-content" id="description">
+            <p class="placeholder">
+              Scan or search a component to see an explanation, typical uses, and where it fits in electronics.
             </p>
           </div>
+        </div>
 
-          <!-- UPLOAD MODE -->
-          <div class="mode-panel" id="mode-upload" style="display:none;">
-            <div class="upload-dropzone" id="uploadDropzone">
-              <div id="uploadPrompt">
-                <div class="upload-icon">
-                  <svg viewBox="0 0 24 24" fill="none">
-                    <path d="M7 17H5a2 2 0 0 1-2-2V9"></path>
-                    <path d="M21 9v6a2 2 0 0 1-2 2h-2"></path>
-                    <path d="M12 3v10"></path>
-                    <path d="M8.5 6.5L12 3l3.5 3.5"></path>
-                    <rect x="7" y="17" width="10" height="4" rx="1"></rect>
-                  </svg>
-                </div>
-                <div class="upload-text">
-                  Drag & drop or click to upload an image
-                </div>
-              </div>
-              <img id="uploadPreview" alt="Upload preview" />
-              <input type="file" id="fileInput" accept="image/*" hidden />
-            </div>
-            <div class="input-controls">
-              <button class="primary-btn" id="analyzeUploadBtn" disabled>🔍 Analyze image</button>
-            </div>
-            <p class="hint">
-              Works well for phone or desktop photos of dev boards, modules, power supplies, and tools.
+        <div class="section">
+          <div class="section-title">Typical Uses</div>
+          <div class="section-content" id="typicalUses">
+            <p class="placeholder">Common applications will appear here.</p>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Where to Buy</div>
+          <div class="section-content" id="whereToBuy">
+            <p class="placeholder">ElectroLens will list typical sources (local shops, online marketplaces, distributors).</p>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Key Specs</div>
+          <div class="section-content" id="keySpecs">
+            <p class="placeholder">Voltage ratings, current, power, tolerance, pinouts, and other specs will appear here.</p>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Project Ideas</div>
+          <div class="section-content" id="projectIdeas">
+            <p class="placeholder">Example projects and use-cases will be generated here.</p>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Common Mistakes & Warnings</div>
+          <div class="section-content" id="commonMistakes">
+            <p class="placeholder">Typical pitfalls, overheating risks, polarity mistakes, and wiring errors will appear here.</p>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Datasheet Hint</div>
+          <div class="section-content" id="datasheetHint">
+            <p class="placeholder">ElectroLens will suggest what to search to find the official datasheet quickly.</p>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Datasheet & References</div>
+          <div class="section-content" id="referencesSection">
+            <p class="placeholder">
+              Direct datasheet links and reference pages will show here when available.
             </p>
           </div>
+        </div>
 
-          <!-- MANUAL MODE -->
-          <div class="mode-panel" id="mode-manual" style="display:none;">
-            <p class="hint" style="margin-bottom:4px;">
-              Type a part number or name (e.g. <i>ESP32 DevKitC, LM7805, 2N2222, HC-SR04</i>).
-            </p>
-            <div class="manual-input-row">
-              <input id="manualInput" type="text"
-                     placeholder="e.g. ESP32 DevKitC, LM7805, 10kΩ resistor 1/4W">
-              <button class="primary-btn" id="manualSearchBtn">Go</button>
-            </div>
+        <div class="section">
+          <div class="section-title">Buy Online</div>
+          <div class="section-content">
+            <div class="shop-links" id="shopLinks"></div>
           </div>
+        </div>
 
-          <canvas id="captureCanvas" style="display:none;"></canvas>
-        </section>
-
-        <!-- RIGHT: ENCYCLOPEDIA CARD -->
-        <section class="card">
-          <div class="ency-header">
-            <div class="ency-title">ElectroLens Encyclopedia</div>
-            <div class="ency-badges">
-              <span class="ency-chip">Gemini Vision</span>
-              <span class="ency-chip">Groq Mixtral</span>
-              <span class="ency-chip">Google Search</span>
-            </div>
+        <div class="section">
+          <div class="section-title">Reference Image</div>
+          <div class="section-content">
+            <img id="refImage" alt="Reference component image"
+                 style="max-width:100%;border-radius:10px;border:1px solid rgba(148,163,184,0.5);display:none;" />
           </div>
+        </div>
 
-          <div class="name-row">
-            <div class="device-name" id="deviceName">No device analyzed yet</div>
-            <div class="device-category" id="deviceCategory">—</div>
-          </div>
-
-          <div class="section">
-            <div class="section-title">Overview</div>
-            <div class="section-content" id="description">
-              <p class="placeholder">
-                Scan or search a component to see a friendly explanation, typical uses, and how it fits into real circuits.
-              </p>
-            </div>
-          </div>
-
-          <div class="section">
-            <div class="section-title">Typical Uses</div>
-            <div class="section-content" id="typicalUses">
-              <p class="placeholder">Common applications will appear here.</p>
-            </div>
-          </div>
-
-          <div class="section">
-            <div class="section-title">Where to Buy</div>
-            <div class="section-content" id="whereToBuy">
-              <p class="placeholder">Shops, distributors, and online marketplaces will be suggested here.</p>
-            </div>
-          </div>
-
-          <div class="section">
-            <div class="section-title">Key Specs</div>
-            <div class="section-content" id="keySpecs">
-              <p class="placeholder">Voltage ratings, current, power, tolerance, and other parameters will appear here.</p>
-            </div>
-          </div>
-
-          <div class="section">
-            <div class="section-title">Project Ideas</div>
-            <div class="section-content" id="projectIdeas">
-              <p class="placeholder">Example projects and use-cases will be generated here.</p>
-            </div>
-          </div>
-
-          <div class="section">
-            <div class="section-title">Common Mistakes & Warnings</div>
-            <div class="section-content" id="commonMistakes">
-              <p class="placeholder">Typical pitfalls, overheating risks, polarity issues, and wiring mistakes will appear here.</p>
-            </div>
-          </div>
-
-          <div class="section">
-            <div class="section-title">Datasheet Hint</div>
-            <div class="section-content" id="datasheetHint">
-              <p class="placeholder">ElectroLens will suggest what to search to find the official datasheet quickly.</p>
-            </div>
-          </div>
-
-          <div class="section">
-            <div class="section-title">Datasheet & References</div>
-            <div class="section-content" id="referencesSection">
-              <p class="placeholder">
-                Direct datasheet links and a few reference pages will appear here when available.
-              </p>
-            </div>
-          </div>
-
-          <div class="section">
-            <div class="section-title">Buy Online</div>
-            <div class="section-content">
-              <div class="shop-links" id="shopLinks"></div>
-            </div>
-          </div>
-
-          <div class="section">
-            <div class="section-title">Reference Image</div>
-            <div class="section-content">
-              <img id="refImage" alt="Reference component image"
-                   style="max-width:100%;border-radius:10px;border:1px solid rgba(148,163,184,0.5);display:none;" />
-            </div>
-          </div>
-
-          <div class="status-bar">
-            <span id="aiStatusText">Ready – choose a mode and analyze.</span>
-            <div class="loader" id="globalLoader"></div>
-          </div>
-        </section>
-      </div>
-    </section>
-
-    <!-- INFO STRIP -->
-    <section class="info-strip">
-      <article class="info-card">
-        <h3>1 · Vision & Identification</h3>
-        <p>
-          Gemini looks at the image and recognizes components, tools, and dev boards, then outputs structured data
-          about what it sees.
-        </p>
-      </article>
-      <article class="info-card">
-        <h3>2 · Engineering Knowledge</h3>
-        <p>
-          Groq’s Mixtral model refines the explanation, adds project ideas, and expands on specs, warnings, and typical uses.
-        </p>
-      </article>
-      <article class="info-card">
-        <h3>3 · Real-World Links</h3>
-        <p>
-          Google Custom Search brings in real product images, datasheets, and quick links to Lazada, Shopee, Amazon,
-          and the likely official store.
-        </p>
-      </article>
-    </section>
+        <div class="status-bar">
+          <span id="aiStatusText">Ready – choose a mode and analyze.</span>
+          <div class="loader" id="globalLoader"></div>
+        </div>
+      </section>
+    </main>
 
     <!-- FOOTER -->
     <footer>
@@ -1213,7 +1006,7 @@
       }
     }
 
-    // Try to softly request camera on load
+    // Soft camera request on load
     window.addEventListener("load", () => {
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         cameraStatusText.textContent = "Requesting camera access…";
