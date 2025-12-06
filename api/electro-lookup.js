@@ -1,18 +1,15 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import fetch from "node-fetch";
 
-/**
- * Helper to read JSON body from Node request (Vercel Node runtime).
- */
+// ========== Helpers: request body + image parsing ==========
+
 async function readJsonBody(req) {
   return await new Promise((resolve, reject) => {
     let data = "";
-    req.on("data", chunk => {
-      data += chunk;
-    });
+    req.on("data", chunk => (data += chunk));
     req.on("end", () => {
       try {
-        const json = data ? JSON.parse(data) : {};
-        resolve(json);
+        resolve(data ? JSON.parse(data) : {});
       } catch (err) {
         reject(err);
       }
@@ -21,124 +18,189 @@ async function readJsonBody(req) {
   });
 }
 
-/**
- * Helper: strip data URL prefix and return { mimeType, base64 }
- */
 function extractBase64FromDataUrl(dataUrl) {
-  if (!dataUrl || typeof dataUrl !== "string") return null;
+  if (!dataUrl || typeof dataUrl !== "string" || !dataUrl.startsWith("data:")) {
+    return null;
+  }
   const match = dataUrl.match(/^data:(.+);base64,(.*)$/);
   if (!match) return null;
   return { mimeType: match[1], base64: match[2] };
 }
 
-/**
- * Generic Google Custom Search image helper.
- * searchType=image, returns first image link or null.
- */
-async function fetchFirstImage(query) {
+// ========== Google Custom Search helpers ==========
+
+async function googleImageSearch(query) {
   const apiKey = process.env.CSE_API_KEY;
   const cx = process.env.CSE_CX;
+  if (!apiKey || !cx || !query) return null;
 
-  if (!apiKey || !cx || !query) {
-    console.warn("Missing CSE_API_KEY or CSE_CX or query for image search");
-    return null;
-  }
-
-  const url =
-    "https://www.googleapis.com/customsearch/v1" +
-    `?q=${encodeURIComponent(query)}` +
-    `&searchType=image` +
-    `&num=1` +
-    `&safe=active` +
-    `&key=${apiKey}` +
-    `&cx=${cx}`;
+  // Added &imgSize=medium to ensure we get visible results that load fast
+  const url = `https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(
+    query
+  )}&searchType=image&imgSize=medium&num=1&safe=active&key=${apiKey}&cx=${cx}`;
 
   try {
     const res = await fetch(url);
     if (!res.ok) {
-      console.error("Image search HTTP error:", res.status, await res.text());
+      console.error(`Image search HTTP error (${query}):`, res.status);
       return null;
     }
     const data = await res.json();
-    if (data.items && data.items.length > 0) {
-      return data.items[0].link; // direct image URL
-    }
+    return data.items?.[0]?.link || null;
   } catch (err) {
-    console.error("Google Image Search error:", err);
+    console.error("Google image search error:", err);
+    return null;
   }
-  return null;
 }
 
-/**
- * Generic Google Custom Search for web references (datasheets, etc.).
- * Returns an array of { title, url, snippet } and optionally one datasheet URL.
- */
-async function fetchWebReferences(query) {
+async function fetchRealImageFromGoogle(nameOrQuery) {
+  return googleImageSearch(nameOrQuery);
+}
+
+async function fetchUsageImageFromGoogle(nameOrQuery) {
+  // try to get an application / example circuit image
+  const q = `${nameOrQuery} application circuit schematic wiring`;
+  return googleImageSearch(q);
+}
+
+async function fetchPinoutImageFromGoogle(nameOrQuery) {
+  // try to get a pinout diagram
+  const q = `${nameOrQuery} pinout diagram`;
+  return googleImageSearch(q);
+}
+
+async function fetchDatasheetAndReferences(name) {
   const apiKey = process.env.CSE_API_KEY;
   const cx = process.env.CSE_CX;
+  if (!apiKey || !cx || !name) return { datasheetUrl: null, references: [] };
 
-  if (!apiKey || !cx || !query) {
-    return { references: [], datasheetUrl: null };
-  }
-
-  const url =
-    "https://www.googleapis.com/customsearch/v1" +
-    `?q=${encodeURIComponent(query)}` +
-    `&num=5` +
-    `&safe=active` +
-    `&key=${apiKey}` +
-    `&cx=${cx}`;
-
-  let references = [];
-  let datasheetUrl = null;
+  const query = `${name} datasheet pdf`;
+  const url = `https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(
+    query
+  )}&num=4&safe=active&key=${apiKey}&cx=${cx}`;
 
   try {
     const res = await fetch(url);
     if (!res.ok) {
-      console.error("Web search HTTP error:", res.status, await res.text());
-      return { references, datasheetUrl };
+      console.error("Datasheet search HTTP error:", res.status);
+      return { datasheetUrl: null, references: [] };
     }
     const data = await res.json();
-    if (Array.isArray(data.items)) {
-      for (const item of data.items) {
-        const ref = {
-          title: item.title,
-          url: item.link,
-          snippet: item.snippet || ""
-        };
-        references.push(ref);
 
-        // Simple heuristic: if the URL or title mentions "datasheet", mark as datasheet.
-        const lowerUrl = (item.link || "").toLowerCase();
-        const lowerTitle = (item.title || "").toLowerCase();
-        if (!datasheetUrl && (lowerUrl.includes("datasheet") || lowerTitle.includes("datasheet"))) {
-          datasheetUrl = item.link;
-        }
+    let datasheetUrl = null;
+    const references = [];
+
+    for (const item of data.items || []) {
+      const link = item.link || "";
+      // Prioritize actual PDF links
+      if (!datasheetUrl && (link.endsWith(".pdf") || item.title.toLowerCase().includes("datasheet"))) {
+        datasheetUrl = link;
+      }
+      if (references.length < 3) {
+        references.push({
+          title: item.title || "Reference",
+          url: link,
+          snippet: item.snippet || ""
+        });
       }
     }
-  } catch (err) {
-    console.error("Google Web Search error:", err);
-  }
 
-  return { references, datasheetUrl };
+    return { datasheetUrl, references };
+  } catch (err) {
+    console.error("Datasheet search error:", err);
+    return { datasheetUrl: null, references: [] };
+  }
 }
 
-/**
- * Helper: build some generic shop search links for the device name.
- */
-function buildShopLinks(name) {
-  if (!name) return null;
-  const encoded = encodeURIComponent(name);
+// ========== Shop links ==========
+
+function generateShopLinks(nameOrQuery) {
+  const q = encodeURIComponent(nameOrQuery || "electronics");
   return {
-    shopee: `https://shopee.ph/search?keyword=${encoded}`,
-    lazada: `https://www.lazada.com.ph/catalog/?q=${encoded}`,
-    amazon: `https://www.amazon.com/s?k=${encoded}`,
-    aliexpress: `https://www.aliexpress.com/wholesale?SearchText=${encoded}`
+    shopee: `https://shopee.ph/search?keyword=${q}`,
+    lazada: `https://www.lazada.com.ph/tag/${q}/`,
+    amazon: `https://www.amazon.com/s?k=${q}`,
+    aliexpress: `https://www.aliexpress.com/wholesale?SearchText=${q}`
   };
 }
 
+// ========== Groq refinement: make it a real encyclopedia ==========
+
+async function groqRefine(baseJson) {
+  const groqKey = process.env.GROQ_API_KEY;
+  if (!groqKey) {
+    console.log("⚠️ No GROQ_API_KEY → skipping Groq refinement.");
+    return baseJson;
+  }
+
+  const systemPrompt = `
+You are ElectroLens PRO, an engineering-grade electronics encyclopedia AI.
+
+You receive a JSON object describing an electronics component.
+Your job is to REWRITE and ENRICH the text fields with very complete, realistic information.
+
+IMPORTANT: 
+- Return the EXACT SAME JSON STRUCTURE.
+- DO NOT change the "real_image", "usage_image", or "pinout_image" URLs. Keep them exactly as is.
+- If the description is thin, expand it significantly.
+
+Fields to enrich:
+- "name": Standardize the name.
+- "category": Keep it accurate.
+- "description": 3-5 paragraphs, detailed engineering context.
+- "typical_uses": Concrete examples.
+- "where_to_buy": Common vendors.
+- "key_specs": Real world numbers (voltages, pin counts, protocols).
+- "project_ideas": Specific project concepts.
+- "common_mistakes": Technical gotchas.
+- "datasheet_hint": Best Google search term.
+
+Return ONLY valid JSON.
+`;
+
+  const body = {
+    model: "mixtral-8x7b-32768",
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: JSON.stringify(baseJson) }
+    ],
+    temperature: 0.3
+  };
+
+  try {
+    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${groqKey}`
+      },
+      body: JSON.stringify(body)
+    });
+
+    if (!res.ok) {
+        console.error("Groq API error:", res.status);
+        return baseJson;
+    }
+
+    const data = await res.json();
+    const text = data?.choices?.[0]?.message?.content;
+    
+    // Extract JSON from potential markdown blocks
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+        return JSON.parse(jsonMatch[0]);
+    } else {
+        return JSON.parse(text);
+    }
+  } catch (err) {
+    console.error("Groq refinement failed:", err);
+    return baseJson; // Fallback to Gemini base data on error
+  }
+}
+
+// ========== Main handler ==========
+
 export default async function handler(req, res) {
-  // Only allow POST
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return res.status(405).json({ error: "Method not allowed" });
@@ -149,161 +211,120 @@ export default async function handler(req, res) {
     const { image, queryText } = body || {};
 
     if (!image && !queryText) {
-      return res.status(400).json({
-        error: "Provide at least an image or a queryText."
-      });
+      return res.status(400).json({ error: "Provide an image or queryText." });
     }
 
-    const apiKey = process.env.GOOGLE_API_KEY;
-    if (!apiKey) {
-      console.error("GOOGLE_API_KEY missing");
-      return res.status(500).json({ error: "Server misconfigured." });
+    const geminiKey = process.env.GOOGLE_API_KEY;
+    if (!geminiKey) {
+      console.error("Missing GOOGLE_API_KEY");
+      return res.status(500).json({ error: "Server misconfigured: GOOGLE_API_KEY missing." });
     }
 
-    const genAI = new GoogleGenerativeAI(apiKey);
+    const genAI = new GoogleGenerativeAI(geminiKey);
+    // Using 1.5 flash or pro is often better for vision, but keeping requested model
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
-    const userText =
-      queryText && queryText.trim().length > 0
-        ? `User query / label: "${queryText.trim()}".`
-        : "No text label given, identify only from the image.";
+    const basePrompt = `
+You are ElectroLens, an electronics component identifier.
+Identify the object in the image or query.
 
-    const parts = [
-      {
-        text: `
-You are ElectroLens, an expert Electronics Engineer and components encyclopedia.
-
-FOCUS ONLY ON ELECTRONICS-RELATED ITEMS:
-- Electronic components (resistors, capacitors, diodes, transistors, ICs, regulators, etc.)
-- Microcontrollers and dev boards (Arduino, ESP32, STM32, etc.)
-- Modules (sensor boards, relay modules, power modules, etc.)
-- Test equipment (multimeter, oscilloscope, power supply, etc.)
-- Tools (soldering iron, breadboard, jumper wires, etc.)
-
-TASK:
-Look at the provided image and/or text label and identify the most likely electronics-related item.
-
-Respond ONLY with a JSON object in this exact format:
-
+Return strict JSON:
 {
-  "name": "Short specific name, like 'ESP32 Dev Board' or '10kΩ Carbon Film Resistor'",
-  "category": "Component | Microcontroller | Tool | Test Equipment | Module | Power Supply | Other",
-  "description": "1-3 paragraphs explaining what it is in simple words, with engineering depth.",
-  "typical_uses": [
-    "Where and how this is usually used in electronics projects or industry"
-  ],
-  "where_to_buy": [
-    "Typical places to buy (local electronics shops, online like Lazada/Shopee/Amazon, distributors like Mouser/Digi-Key, etc.)"
-  ],
-  "key_specs": [
-    "Important specs or parameters (voltage ratings, current, power, tolerance, package, frequency, etc.) if identifiable. If unsure, be honest."
-  ],
-  "project_ideas": [
-    "Example project ideas using this part in real circuits or hobby projects"
-  ],
-  "common_mistakes": [
-    "Common wiring or usage mistakes, and warnings related to power, polarity, pinout, or heat"
-  ],
-  "datasheet_hint": "Short instruction on what to search on Google to find its datasheet. Include an example search query."
+  "name": "Component Name",
+  "category": "Component Category",
+  "description": "Brief description",
+  "typical_uses": ["Use 1", "Use 2"],
+  "where_to_buy": ["Store 1"],
+  "key_specs": ["Spec 1"],
+  "datasheet_hint": "Search query for datasheet",
+  "project_ideas": ["Project 1"],
+  "common_mistakes": ["Mistake 1"],
+  "image_search_query": "Specific search query for Google Images"
 }
 
-RULES:
-- If you are not confident about the exact model, describe the general device type and say that the model is approximate.
-- Do NOT invent unrealistic, ultra-specific part numbers if you cannot see them.
-- If the object is not clearly electronics-related, set:
-  "name": "Not an electronics-focused object",
-  "category": "Other"
-and briefly explain that it's outside electronics.
-      `.trim()
-      },
-      { text: userText }
-    ];
+"image_search_query" is CRITICAL. It should be the most precise name of the component to find a clean photo (e.g. 'ESP32 DevKit V1', 'Arduino Uno R3', 'LM7805 voltage regulator').
+`;
+
+    const parts = [{ text: basePrompt }];
 
     if (image) {
       const extracted = extractBase64FromDataUrl(image);
       if (!extracted) {
         return res.status(400).json({
-          error: "Image must be a base64 data URL like 'data:image/jpeg;base64,...'"
+          error: "Image must be a base64 data URL like data:image/jpeg;base64,..."
         });
       }
       parts.push({
         inlineData: {
-          mimeType: extracted.mimeType || "image/jpeg",
+          mimeType: extracted.mimeType,
           data: extracted.base64
         }
       });
+      if (queryText && queryText.trim()) {
+        parts.push({ text: `User text label: "${queryText.trim()}"` });
+      }
+    } else {
+      parts.push({ text: `User typed query: "${queryText.trim()}"` });
     }
 
-    // Call Gemini
-    const geminiResult = await model.generateContent({
+    const geminiResp = await model.generateContent({
       contents: [{ role: "user", parts }],
       generationConfig: { responseMimeType: "application/json" }
     });
 
-    const text = geminiResult.response.text();
-
-    let parsed;
+    let baseJson;
     try {
-      parsed = JSON.parse(text);
-    } catch (e) {
-      console.error("Failed to parse JSON from Gemini:", text);
-      return res
-        .status(500)
-        .json({ error: "Failed to parse AI response from Gemini." });
+      baseJson = JSON.parse(geminiResp.response.text());
+    } catch (err) {
+      console.error("Failed to parse Gemini JSON:", geminiResp.response.text());
+      return res.status(500).json({ error: "Failed to parse Gemini response as JSON." });
     }
 
-    // Base encyclopedia result from Gemini
-    const baseName =
-      parsed.name && typeof parsed.name === "string"
-        ? parsed.name
-        : (queryText || "Unknown device");
+    // --- LOGIC UPDATE: Better Search Query Construction ---
+    const nameOrQuery =
+      (baseJson.image_search_query && baseJson.image_search_query.length > 2)
+        ? baseJson.image_search_query
+        : (baseJson.name || queryText || "electronics component");
 
-    const result = {
-      name: baseName,
-      category: parsed.category || "Other",
-      description: parsed.description || "No description provided.",
-      typical_uses: Array.isArray(parsed.typical_uses) ? parsed.typical_uses : [],
-      where_to_buy: Array.isArray(parsed.where_to_buy) ? parsed.where_to_buy : [],
-      key_specs: Array.isArray(parsed.key_specs) ? parsed.key_specs : [],
-      project_ideas: Array.isArray(parsed.project_ideas) ? parsed.project_ideas : [],
-      common_mistakes: Array.isArray(parsed.common_mistakes) ? parsed.common_mistakes : [],
-      datasheet_hint:
-        parsed.datasheet_hint ||
-        `Search for "${baseName} datasheet" on your preferred search engine.`,
-      // place-holders, will be filled below
-      references: [],
-      datasheet_url: null,
-      shop_links: buildShopLinks(baseName),
-      official_store: null,
-      real_image: null,
-      usage_image: null,
-      pinout_image: null
-    };
+    console.log(`Searching images for: ${nameOrQuery}`);
 
-    // 1) Web references + datasheet
-    const { references, datasheetUrl } = await fetchWebReferences(baseName);
-    if (references && references.length > 0) {
-      result.references = references;
-    }
-    if (datasheetUrl) {
-      result.datasheet_url = datasheetUrl;
-    }
-
-    // 2) Images (component, usage, pinout)
-    //    Keep it simple: 3 separate searches. This is okay for free-tier demos.
-    const [realImageUrl, usageImageUrl, pinoutImageUrl] = await Promise.all([
-      fetchFirstImage(baseName),
-      fetchFirstImage(`${baseName} in circuit`),
-      fetchFirstImage(`${baseName} pinout diagram`)
+    // --- FETCH IMAGES ---
+    // We execute these in parallel for speed
+    const [realImage, usageImage, pinoutImage, dsData] = await Promise.all([
+        fetchRealImageFromGoogle(nameOrQuery),
+        fetchUsageImageFromGoogle(nameOrQuery),
+        fetchPinoutImageFromGoogle(nameOrQuery),
+        fetchDatasheetAndReferences(baseJson.name || queryText)
     ]);
 
-    result.real_image = realImageUrl || null;
-    result.usage_image = usageImageUrl || null;
-    result.pinout_image = pinoutImageUrl || null;
+    // Attach to baseJson
+    baseJson.real_image = realImage;
+    baseJson.usage_image = usageImage;
+    baseJson.pinout_image = pinoutImage;
+    baseJson.datasheet_url = dsData.datasheetUrl;
+    baseJson.references = dsData.references;
+    baseJson.shop_links = generateShopLinks(baseJson.name);
 
-    return res.status(200).json(result);
+    // --- REFINE WITH GROQ ---
+    let refinedJson = await groqRefine(baseJson);
+
+    // --- CRITICAL FIX: RESTORE IMAGES ---
+    // Sometimes LLMs hallucinates empty strings or nulls for fields it can't "see".
+    // We explicitly overwrite the URL fields with the ones we fetched from Google above.
+    refinedJson.real_image = baseJson.real_image;
+    refinedJson.usage_image = baseJson.usage_image;
+    refinedJson.pinout_image = baseJson.pinout_image;
+    refinedJson.datasheet_url = baseJson.datasheet_url;
+    refinedJson.references = baseJson.references;
+    refinedJson.shop_links = baseJson.shop_links;
+    
+    // Ensure the frontend search fallback works by passing the query back
+    refinedJson.image_search_query = nameOrQuery; 
+
+    return res.status(200).json(refinedJson);
+
   } catch (err) {
     console.error("Error in /api/electro-lookup:", err);
-    return res.status(500).json({ error: "Gemini/Google request failed." });
+    return res.status(500).json({ error: "Internal server error in electro-lookup." });
   }
 }
