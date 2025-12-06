@@ -490,6 +490,20 @@
       100% { transform:scale(1); opacity:0; }
     }
 
+    /* Loading spinner */
+    .loader {
+      width:14px;
+      height:14px;
+      border-radius:50%;
+      border:2px solid rgba(148,163,184,0.6);
+      border-top-color:#6366f1;
+      animation:spin 0.7s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform:rotate(360deg); }
+    }
+
     .tiny {
       font-size:10px;
       opacity:0.75;
@@ -816,6 +830,7 @@
         <div class="status-bar">
           <div style="display:flex;align-items:center;gap:6px;">
             <div class="status-dot-ai"></div>
+            <div class="loader" id="globalLoader" style="display:none;"></div>
             <span id="aiStatusText">Ready – choose a mode and analyze.</span>
           </div>
           <div class="tiny">
@@ -867,6 +882,7 @@
     const refImageEl = document.getElementById("refImage");
     const aiStatusText = document.getElementById("aiStatusText");
     const historyEl = document.getElementById("history");
+    const globalLoaderEl = document.getElementById("globalLoader");
 
     let stream = null;
     let cameraOn = false;
@@ -942,8 +958,7 @@
       analyzing = true;
       analyzeCameraBtn.disabled = true;
 
-      aiStatusText.textContent = "Capturing frame and asking ElectroLens…";
-
+      // Show capture + loading feedback
       const width = video.videoWidth || 640;
       const height = video.videoHeight || 480;
       canvas.width = width;
@@ -952,10 +967,18 @@
       ctx.drawImage(video, 0, 0, width, height);
       const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
 
+      cameraStatusText.textContent = "Frame captured – analyzing…";
+      lensText.textContent = "analyzing";
+      aiStatusText.textContent = "Captured frame and asking ElectroLens…";
+
       await queryElectroLens({ image: dataUrl, queryText: "" });
 
       analyzing = false;
       analyzeCameraBtn.disabled = !cameraOn;
+      if (cameraOn) {
+        cameraStatusText.textContent = "Camera active";
+        lensText.textContent = "live";
+      }
     });
 
     // ----- Upload -----
@@ -1013,6 +1036,9 @@
     // ----- Common API call -----
     async function queryElectroLens({ image, queryText }) {
       try {
+        // show loading spinner
+        globalLoaderEl.style.display = "inline-block";
+
         const res = await fetch("/api/electro-lookup", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -1029,6 +1055,9 @@
         descriptionEl.innerHTML =
           '<p class="error">Failed to analyze. Check server logs or your API key.</p>';
         aiStatusText.textContent = "Error – see console/server logs.";
+      } finally {
+        // hide loading spinner
+        globalLoaderEl.style.display = "none";
       }
     }
 
