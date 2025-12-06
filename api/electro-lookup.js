@@ -89,7 +89,7 @@ async function fetchDatasheetAndReferences(name) {
     let datasheetUrl = null;
     const references = [];
 
-    for (const item of (data.items || [])) {
+    for (const item of data.items || []) {
       const link = item.link || "";
       if (!datasheetUrl && (link.endsWith(".pdf") || link.toLowerCase().includes("datasheet"))) {
         datasheetUrl = link;
@@ -298,7 +298,7 @@ Return STRICT JSON ONLY in this shape:
 - "image_search_query": the best search phrase to find images of this exact device (e.g. "ESP32 DevKitC board", "LM7805 TO-220").
 `;
 
-    const parts: any[] = [{ text: basePrompt }];
+    const parts = [{ text: basePrompt }];
 
     if (image) {
       const extracted = extractBase64FromDataUrl(image);
