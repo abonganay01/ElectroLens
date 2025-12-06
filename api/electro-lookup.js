@@ -1,4 +1,4 @@
-\import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import fetch from "node-fetch";
 
 // ========== Helpers: request body + image parsing ==========
