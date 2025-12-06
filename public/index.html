@@ -26,7 +26,7 @@
       background: radial-gradient(circle at top, #0b1220, #020617 55%, #000 100%);
       color: var(--text);
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       justify-content: center;
       padding: 24px;
     }
@@ -35,11 +35,11 @@
       width: 100%;
       max-width: 1180px;
       display: grid;
-      grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
-      gap: 24px;
+      grid-template-columns: minmax(0, 1.05fr) minmax(0, 1.55fr); /* more space for encyclopedia */
+      gap: 20px;
     }
 
-    @media (max-width: 900px) {
+    @media (max-width: 1000px) {
       .page {
         grid-template-columns: minmax(0, 1fr);
       }
@@ -49,7 +49,7 @@
     }
 
     .card, .side-card {
-      border-radius: 24px;
+      border-radius: 20px;
       border: 1px solid var(--border);
       background: radial-gradient(circle at top left, #020617, #020617 40%, #020617 100%);
       box-shadow: 0 18px 45px rgba(15, 23, 42, 0.9);
@@ -71,7 +71,21 @@
     .card-inner, .side-inner {
       position: relative;
       z-index: 1;
-      padding: 20px;
+      padding: 18px;
+    }
+
+    .card-inner {
+      padding-bottom: 16px;
+    }
+
+    .side-card {
+      background: rgba(15, 23, 42, 0.98);
+    }
+
+    .side-inner {
+      padding: 18px 18px 14px;
+      max-height: calc(100vh - 48px);
+      overflow-y: auto;
     }
 
     .badge {
@@ -96,7 +110,7 @@
     }
 
     h1 {
-      font-size: clamp(26px, 3vw, 30px);
+      font-size: clamp(24px, 2.4vw, 28px);
       line-height: 1.2;
       margin-bottom: 6px;
     }
@@ -109,7 +123,7 @@
     }
 
     .subtext {
-      font-size: 14px;
+      font-size: 13px;
       color: var(--muted);
       margin-bottom: 12px;
       max-width: 520px;
@@ -152,9 +166,9 @@
     }
 
     .camera-shell {
-      border-radius: 20px;
+      border-radius: 16px;
       background: radial-gradient(circle at top, #020617, #020617);
-      padding: 14px;
+      padding: 12px;
       border: 1px solid var(--border);
     }
 
@@ -164,7 +178,7 @@
       align-items: center;
       font-size: 11px;
       color: var(--muted);
-      margin-bottom: 10px;
+      margin-bottom: 8px;
     }
 
     .dots { display:flex; gap:4px; }
@@ -200,11 +214,11 @@
 
     .glass-frame {
       position:relative;
-      border-radius:14px;
+      border-radius:12px;
       overflow:hidden;
       background:#020617;
       border:1px solid rgba(31,41,55,0.9);
-      min-height:260px;
+      min-height:230px;
     }
 
     video, #uploadPreview {
@@ -260,7 +274,7 @@
       flex-wrap:wrap;
       gap:10px;
       align-items:center;
-      margin-top:12px;
+      margin-top:10px;
     }
 
     .primary-btn {
@@ -268,12 +282,12 @@
       outline:none;
       cursor:pointer;
       border-radius:999px;
-      padding:9px 18px;
-      font-size:14px;
+      padding:8px 16px;
+      font-size:13px;
       font-weight:500;
       display:inline-flex;
       align-items:center;
-      gap:8px;
+      gap:6px;
       background:radial-gradient(circle at top left,#4f46e5,#1d4ed8);
       color:white;
       box-shadow:0 10px 25px rgba(79,70,229,0.6);
@@ -298,7 +312,7 @@
       border:1px solid var(--border);
       background:rgba(15,23,42,0.95);
       color:var(--muted);
-      padding:8px 14px;
+      padding:7px 12px;
       font-size:12px;
       display:inline-flex;
       align-items:center;
@@ -349,30 +363,14 @@
       color:rgba(148,163,184,0.8);
     }
 
-    .upload-input {
-      margin-top:6px;
-      font-size:12px;
-      color:var(--muted);
-    }
-
-    /* SIDE CARD */
-    .side-card {
-      background:rgba(15,23,42,0.98);
-    }
-
-    .side-inner {
-      padding:16px 16px 12px;
-      max-height: 90vh;
-      overflow-y: auto;
-    }
-
+    /* SIDE CARD / ENCYCLOPEDIA */
     .side-header {
       display:flex;
       justify-content:space-between;
       align-items:center;
       gap:8px;
-      font-size:14px;
-      margin-bottom:4px;
+      font-size:15px;
+      margin-bottom:6px;
     }
 
     .title-left {
@@ -382,20 +380,21 @@
     }
 
     .title-icon {
-      width:22px;
-      height:22px;
+      width:24px;
+      height:24px;
       border-radius:999px;
       background:radial-gradient(circle at 30% 0,#a855f7,#4f46e5);
       display:inline-flex;
       align-items:center;
       justify-content:center;
-      font-size:13px;
+      font-size:14px;
     }
 
     .chip-row {
       display:flex;
       flex-wrap:wrap;
       gap:6px;
+      justify-content:flex-end;
     }
 
     .chip {
@@ -413,10 +412,33 @@
       border-color:var(--accent);
     }
 
+    .name-row {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:8px;
+      margin-top:6px;
+      margin-bottom:2px;
+    }
+
+    .device-name {
+      font-weight:600;
+      font-size:16px;
+    }
+
+    .device-category {
+      font-size:11px;
+      padding:3px 8px;
+      border-radius:999px;
+      border:1px solid rgba(148,163,184,0.5);
+      background:rgba(15,23,42,1);
+      color:#c7d2fe;
+    }
+
     .section {
       margin-top:8px;
-      font-size:13px;
-      line-height:1.5;
+      font-size:13.5px;
+      line-height:1.55;
     }
 
     .section-title {
@@ -428,7 +450,7 @@
     }
 
     .section-content {
-      font-size:13px;
+      font-size:13.5px;
     }
 
     .section ul {
@@ -437,28 +459,6 @@
 
     .section li {
       margin-bottom:3px;
-    }
-
-    .name-row {
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      gap:8px;
-      margin-top:8px;
-    }
-
-    .device-name {
-      font-weight:600;
-      font-size:15px;
-    }
-
-    .device-category {
-      font-size:11px;
-      padding:3px 8px;
-      border-radius:999px;
-      border:1px solid rgba(148,163,184,0.5);
-      background:rgba(15,23,42,1);
-      color:#c7d2fe;
     }
 
     .placeholder {
@@ -520,7 +520,7 @@
       padding-top:8px;
       border-top:1px dashed rgba(148,163,184,0.5);
       font-size:11px;
-      max-height:130px;
+      max-height:120px;
       overflow:auto;
     }
 
@@ -615,13 +615,13 @@
     .upload-dropzone {
       border: 2px dashed rgba(148,163,184,0.4);
       border-radius: 16px;
-      padding: 30px;
+      padding: 26px;
       background: rgba(15,23,42,0.5);
       text-align: center;
       cursor: pointer;
       transition: background 0.15s, border-color 0.15s, transform 0.15s, box-shadow 0.15s;
       position: relative;
-      min-height: 220px;
+      min-height: 210px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -693,6 +693,12 @@
       object-fit: contain;
       background: rgba(0,0,0,0.65);
       z-index: 0;
+    }
+
+    @media (max-width: 700px) {
+      .side-inner {
+        max-height: none;
+      }
     }
   </style>
 </head>
@@ -775,7 +781,7 @@
           <div class="upload-dropzone" id="uploadDropzone">
             <div class="upload-prompt" id="uploadPrompt">
               <div class="upload-icon" aria-hidden="true">
-                <!-- Simple upload arrow into a tray icon -->
+                <!-- upload icon -->
                 <svg viewBox="0 0 24 24" fill="none">
                   <path d="M7 17H5a2 2 0 0 1-2-2V9" />
                   <path d="M21 9v6a2 2 0 0 1-2 2h-2" />
@@ -794,7 +800,7 @@
             <input type="file" id="fileInput" accept="image/*" hidden />
           </div>
 
-          <div class="controls" style="margin-top:12px;">
+          <div class="controls" style="margin-top:10px;">
             <button class="primary-btn" id="analyzeUploadBtn" disabled>
               <span>🔍</span>
               <span>Analyze Uploaded Image</span>
@@ -828,7 +834,7 @@
       </div>
     </section>
 
-    <!-- RIGHT: AI Output -->
+    <!-- RIGHT: AI Output (Encyclopedia) -->
     <aside class="side-card">
       <div class="side-inner">
         <div class="side-header">
