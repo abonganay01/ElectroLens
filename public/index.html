@@ -269,18 +269,6 @@
 
     .placeholder { font-style: italic; opacity: 0.7; }
 
-    /* CIRCUIT ASCII BOX */
-    .ascii-box {
-      background: rgba(0,0,0,0.4);
-      padding: 12px;
-      border-radius: 8px;
-      font-family: monospace;
-      white-space: pre;
-      font-size: 12px;
-      border: 1px solid rgba(255,255,255,0.1);
-      overflow-x: auto;
-    }
-
     /* SHOP LINKS */
     .shop-links {
       display:flex;
@@ -450,14 +438,6 @@
           <div class="section-content" id="commonMistakes"></div>
         </div>
 
-        <!-- ASCII CIRCUIT -->
-        <div class="section">
-          <div class="section-title">Circuit Example (ASCII)</div>
-          <div class="ascii-box" id="asciiCircuit">
-            <span class="placeholder">No circuit generated yet.</span>
-          </div>
-        </div>
-
         <!-- DATASHEET -->
         <div class="section">
           <div class="section-title">Datasheet & References</div>
@@ -522,7 +502,6 @@ const typicalUsesEl = document.getElementById("typicalUses");
 const keySpecsEl = document.getElementById("keySpecs");
 const projectIdeasEl = document.getElementById("projectIdeas");
 const commonMistakesEl = document.getElementById("commonMistakes");
-const asciiCircuitEl = document.getElementById("asciiCircuit");
 const referencesEl = document.getElementById("referencesSection");
 const shopLinksEl = document.getElementById("shopLinks");
 const refImageEl = document.getElementById("refImage");
@@ -709,10 +688,6 @@ function renderResult(r) {
   renderList(keySpecsEl, r.key_specs);
   renderList(projectIdeasEl, r.project_ideas);
   renderList(commonMistakesEl, r.common_mistakes);
-
-  /* ASCII Circuit */
-  asciiCircuitEl.textContent =
-    r.circuit_ascii || "No ASCII circuit provided.";
 
   /* Datasheet & references */
   referencesEl.innerHTML = "";
