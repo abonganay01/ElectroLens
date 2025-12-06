@@ -1,0 +1,1207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>ElectroLens – AI Electronics Encyclopedia</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <style>
+    :root {
+      --bg: #020617;
+      --panel-soft: rgba(15,23,42,0.96);
+      --accent: #6366f1;
+      --border: rgba(148,163,184,0.35);
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --radius-lg: 20px;
+      --radius-md: 14px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Inter", sans-serif;
+      min-height: 100vh;
+      background: radial-gradient(circle at top, #0b1120, #020617 55%, #000 100%);
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .shell {
+      width: 100%;
+      max-width: 1200px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    /* HEADER */
+    .site-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-placeholder {
+      width: 42px;
+      height: 42px;
+      border-radius: 14px;
+      background: radial-gradient(circle at 20% 0, #4f46e5, #020617);
+      border: 1px solid rgba(148,163,184,0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      color: #c7d2fe;
+      box-shadow: 0 12px 25px rgba(15,23,42,0.8);
+    }
+
+    .brand-title {
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+
+    .brand-highlight { color: #818cf8; }
+
+    .brand-subtitle {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 12px;
+      font-size: 12px;
+      color: var(--muted);
+      opacity: 0.85;
+    }
+
+    .nav-links span { cursor: default; }
+
+    /* HERO */
+    .hero {
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      background: radial-gradient(circle at top left, rgba(79,70,229,0.28), #020617 60%);
+      padding: 18px 18px 14px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: -40%;
+      background:
+        radial-gradient(circle at 0 0, rgba(129,140,248,0.25), transparent 60%),
+        radial-gradient(circle at 100% 0, rgba(45,212,191,0.18), transparent 60%);
+      opacity: 0.7;
+      pointer-events: none;
+    }
+
+    .hero-inner {
+      position: relative;
+      z-index: 1;
+      max-width: 640px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.7);
+      background: rgba(15,23,42,0.9);
+      color: var(--muted);
+      font-size: 11px;
+      margin-bottom: 8px;
+    }
+
+    .badge-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #22c55e;
+      box-shadow: 0 0 10px rgba(22,163,74,0.9);
+    }
+
+    .hero-title {
+      font-size: clamp(24px, 2.3vw, 28px);
+      line-height: 1.15;
+      margin-bottom: 6px;
+    }
+
+    .hero-title span {
+      background: linear-gradient(120deg,#818cf8,#22d3ee);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .hero-text {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 10px;
+      max-width: 560px;
+    }
+
+    .hero-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .hero-pill {
+      padding: 4px 9px;
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.7);
+      background: rgba(15,23,42,0.96);
+      font-size: 11px;
+      color: #cbd5f5;
+    }
+
+    .hero-note {
+      font-size: 12px;
+      color: var(--muted);
+      border-radius: 12px;
+      border: 1px dashed rgba(148,163,184,0.7);
+      background: rgba(15,23,42,0.9);
+      padding: 9px;
+      max-width: 560px;
+    }
+
+    /* APP SECTION */
+    .app {
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      background: rgba(15,23,42,0.98);
+      padding: 13px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.0fr) minmax(0, 1.6fr);
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    @media (max-width: 900px) {
+      .app { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      background: var(--panel-soft);
+      padding: 10px 10px 8px;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .card-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--muted);
+    }
+
+    .card-tag {
+      font-size: 11px;
+      padding: 3px 7px;
+      border-radius: 999px;
+      background: rgba(15,23,42,1);
+      border: 1px solid rgba(148,163,184,0.7);
+      color: #c7d2fe;
+    }
+
+    /* MODES */
+    .mode-tabs {
+      display: inline-flex;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(15,23,42,1);
+      padding: 3px;
+      margin-bottom: 8px;
+    }
+
+    .mode-tab {
+      border-radius: 999px;
+      border: none;
+      background: transparent;
+      font-size: 12px;
+      color: var(--muted);
+      padding: 6px 12px;
+      cursor: pointer;
+      transition: 0.15s;
+    }
+
+    .mode-tab.active {
+      background: rgba(255,255,255,0.08);
+      color: var(--text);
+    }
+
+    .mode-panel { margin-top: 6px; }
+
+    /* CAMERA */
+    .camera-shell {
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: rgba(15,23,42,0.8);
+      padding: 8px;
+    }
+
+    .glass-frame {
+      position: relative;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid rgba(0,0,0,0.7);
+      background: black;
+      min-height: 200px;
+    }
+
+    video, #cameraCapturePreview {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    #cameraCapturePreview {
+      position: absolute;
+      inset: 0;
+      display: none;
+    }
+
+    .camera-status {
+      position: absolute;
+      left: 10px;
+      bottom: 10px;
+      background: rgba(15,23,42,0.85);
+      border-radius: 999px;
+      padding: 4px 9px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .input-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .primary-btn {
+      border-radius: 999px;
+      border: none;
+      padding: 7px 14px;
+      font-size: 13px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: linear-gradient(120deg,#4f46e5,#1d4ed8);
+      color: white;
+      cursor: pointer;
+      box-shadow: 0 10px 24px rgba(79,70,229,0.6);
+      transition: 0.12s;
+    }
+
+    .primary-btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 16px 36px rgba(79,70,229,0.8);
+    }
+
+    .primary-btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
+    }
+
+    .hint {
+      margin-top: 6px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    /* UPLOAD */
+    .upload-dropzone {
+      border-radius: 12px;
+      border: 2px dashed rgba(148,163,184,0.55);
+      background: rgba(15,23,42,0.85);
+      padding: 24px;
+      min-height: 200px;
+      text-align: center;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: 0.15s;
+    }
+
+    .upload-dropzone:hover {
+      border-color: #6366f1;
+      background: rgba(15,23,42,0.95);
+    }
+
+    .upload-dropzone.dragover {
+      border-color: #818cf8;
+      background: radial-gradient(circle at top, rgba(79,70,229,0.25), rgba(15,23,42,0.98));
+      box-shadow: 0 18px 40px rgba(79,70,229,0.4);
+      transform: scale(1.01);
+    }
+
+    .upload-icon svg {
+      width: 42px;
+      height: 42px;
+      stroke: #c7d2fe;
+    }
+
+    .upload-text {
+      margin-top: 6px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    #uploadPreview {
+      display: none;
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: rgba(0,0,0,0.85);
+    }
+
+    /* MANUAL INPUT */
+    .manual-input-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .manual-input-row input {
+      flex: 1;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(15,23,42,1);
+      color: var(--text);
+      padding: 8px 12px;
+      font-size: 13px;
+    }
+
+    .manual-input-row input::placeholder {
+      color: rgba(148,163,184,0.85);
+    }
+
+    /* ENCYCLOPEDIA */
+    .ency-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .ency-title {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--muted);
+    }
+
+    .ency-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      font-size: 11px;
+    }
+
+    .ency-chip {
+      padding: 3px 7px;
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.7);
+      background: rgba(15,23,42,1);
+      color: #cbd5f5;
+    }
+
+    .name-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+
+    .device-name {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .device-category {
+      font-size: 11px;
+      padding: 3px 7px;
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.7);
+      background: rgba(15,23,42,1);
+    }
+
+    .section {
+      margin-top: 8px;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .section-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--muted);
+      margin-bottom: 3px;
+    }
+
+    .section-content ul {
+      padding-left: 18px;
+    }
+
+    .section-content li {
+      margin-bottom: 3px;
+    }
+
+    .placeholder {
+      font-style: italic;
+      color: var(--muted);
+    }
+
+    .ref-link {
+      color: #93c5fd;
+      text-decoration: none;
+    }
+
+    .ref-link:hover { text-decoration: underline; }
+
+    .ref-snippet {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .shop-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .shop-btn {
+      font-size: 12px;
+      padding: 4px 9px;
+      border-radius: 8px;
+      border: 1px solid rgba(148,163,184,0.7);
+      background: rgba(15,23,42,1);
+      color: #cbd5f5;
+      text-decoration: none;
+    }
+
+    .shop-btn:hover {
+      border-color: var(--accent);
+      color: white;
+    }
+
+    /* Reference images */
+    .ref-image-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    @media (max-width: 900px) {
+      .ref-image-grid { grid-template-columns: 1fr; }
+    }
+
+    .ref-block {
+      border-radius: 10px;
+      border: 1px solid rgba(148,163,184,0.5);
+      background: rgba(15,23,42,0.9);
+      padding: 6px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .ref-img-label {
+      margin-bottom: 4px;
+      font-size: 11px;
+      color: #e5e7eb;
+    }
+
+    .ref-block img {
+      width: 100%;
+      border-radius: 6px;
+      display: none;
+    }
+
+    .status-bar {
+      margin-top: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .loader {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 2px solid rgba(148,163,184,0.5);
+      border-top-color: var(--accent);
+      animation: spin 0.7s linear infinite;
+      display: none;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* INFO STRIP + FOOTER */
+    .info-strip {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    @media (max-width: 900px) {
+      .info-strip { grid-template-columns: 1fr; }
+    }
+
+    .info-card {
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      background: var(--panel-soft);
+      padding: 9px 11px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .info-card h3 {
+      font-size: 13px;
+      margin-bottom: 3px;
+      color: #e5e7eb;
+    }
+
+    footer {
+      text-align: center;
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 8px;
+      padding-top: 6px;
+      border-top: 1px solid rgba(15,23,42,0.9);
+      opacity: 0.85;
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <!-- HEADER -->
+    <header class="site-header">
+      <div class="brand">
+        <div class="logo-placeholder">⚡</div>
+        <div>
+          <div class="brand-title">
+            <span class="brand-highlight">ElectroLens</span> – AI Electronics Encyclopedia
+          </div>
+          <div class="brand-subtitle">
+            Identify components, read specs, and discover projects using Gemini, Groq, and Google.
+          </div>
+        </div>
+      </div>
+      <nav class="nav-links">
+        <span>How it works</span>
+        <span>Components</span>
+        <span>About</span>
+      </nav>
+    </header>
+
+    <!-- HERO -->
+    <section class="hero">
+      <div class="hero-inner">
+        <div class="badge">
+          <span class="badge-dot"></span>
+          Live lab assistant · Vision + LLM + Web
+        </div>
+        <h1 class="hero-title">
+          Turn any bench into an <span>AI electronics lab guide.</span>
+        </h1>
+        <p class="hero-text">
+          Snap a photo of a board or tool, or type a part number. ElectroLens identifies the device, pulls real images
+          and datasheets, and explains how to use it like an electronics engineer’s encyclopedia.
+        </p>
+        <div class="hero-pills">
+          <span class="hero-pill">📷 Camera & image upload</span>
+          <span class="hero-pill">📚 Specs, uses & warnings</span>
+          <span class="hero-pill">🛒 Links to Shopee, Lazada, Amazon</span>
+        </div>
+        <div class="hero-note">
+          Try scanning an <b>ESP32 dev board</b>, <b>LM7805 regulator</b>, or a <b>relay module</b> to see a full
+          ElectroLens entry with real datasheet hints, images, and buying links.
+        </div>
+      </div>
+    </section>
+
+    <!-- APP SECTION -->
+    <section class="app">
+      <!-- LEFT: INPUT -->
+      <section class="card">
+        <div class="card-header">
+          <div class="card-label">Input</div>
+          <div class="card-tag">ElectroLens Scanner</div>
+        </div>
+
+        <div class="mode-tabs">
+          <button class="mode-tab active" data-mode="camera">📷 Camera</button>
+          <button class="mode-tab" data-mode="upload">🖼 Upload</button>
+          <button class="mode-tab" data-mode="manual">🔍 Type Name</button>
+        </div>
+
+        <!-- CAMERA MODE -->
+        <div class="mode-panel" id="mode-camera">
+          <div class="camera-shell">
+            <div class="glass-frame">
+              <video id="camera" autoplay playsinline></video>
+              <img id="cameraCapturePreview" alt="Captured frame" />
+              <div class="camera-status">
+                <span id="cameraStatusText">Waiting for permission…</span>
+              </div>
+            </div>
+          </div>
+          <div class="input-controls">
+            <button class="primary-btn" id="analyzeCameraBtn" disabled>🔍 Analyze frame</button>
+            <button class="primary-btn" id="toggleCameraBtn">▶ Start camera</button>
+          </div>
+          <p class="hint">
+            Place a single component or board in the center with good lighting for the best identification.
+          </p>
+        </div>
+
+        <!-- UPLOAD MODE -->
+        <div class="mode-panel" id="mode-upload" style="display:none;">
+          <div class="upload-dropzone" id="uploadDropzone">
+            <div id="uploadPrompt">
+              <div class="upload-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke="currentColor"></path>
+                  <path d="M12 3v14" stroke="currentColor"></path>
+                  <path d="M7 8l5-5 5 5" stroke="currentColor"></path>
+                </svg>
+              </div>
+              <div class="upload-text">Drag & drop or click to upload an image</div>
+            </div>
+            <img id="uploadPreview" alt="Upload preview" />
+            <input type="file" id="fileInput" accept="image/*" hidden />
+          </div>
+          <div class="input-controls">
+            <button class="primary-btn" id="analyzeUploadBtn" disabled>🔍 Analyze image</button>
+          </div>
+          <p class="hint">
+            Works for clear photos of dev boards, modules, tools, or measurement equipment captured from your phone or PC.
+          </p>
+        </div>
+
+        <!-- MANUAL MODE -->
+        <div class="mode-panel" id="mode-manual" style="display:none;">
+          <p class="hint" style="margin-bottom:4px;">
+            Type a part number or component name (e.g. <i>ESP32 DevKitC, LM7805, 2N2222, 10kΩ resistor 1/4W</i>).
+          </p>
+          <div class="manual-input-row">
+            <input id="manualInput" type="text" placeholder="e.g. ESP32 DevKitC, LM7805, HC-SR04 module">
+            <button class="primary-btn" id="manualSearchBtn">Go</button>
+          </div>
+        </div>
+
+        <canvas id="captureCanvas" style="display:none;"></canvas>
+      </section>
+
+      <!-- RIGHT: ENCYCLOPEDIA -->
+      <section class="card">
+        <div class="ency-header">
+          <div class="ency-title">ElectroLens Encyclopedia</div>
+          <div class="ency-badges">
+            <span class="ency-chip">Gemini Vision</span>
+            <span class="ency-chip">Groq Mixtral</span>
+            <span class="ency-chip">Google Search</span>
+          </div>
+        </div>
+
+        <div class="name-row">
+          <div class="device-name" id="deviceName">No device analyzed yet</div>
+          <div class="device-category" id="deviceCategory">—</div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Overview</div>
+          <div class="section-content" id="description">
+            <p class="placeholder">Scan or search a component to see a friendly explanation and how it fits into real circuits.</p>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Typical Uses</div>
+          <div class="section-content" id="typicalUses">
+            <p class="placeholder">Common applications will appear here.</p>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Where to Buy</div>
+          <div class="section-content" id="whereToBuy">
+            <p class="placeholder">Shops, distributors, and marketplaces will appear here.</p>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Key Specs</div>
+          <div class="section-content" id="keySpecs">
+            <p class="placeholder">Voltage, current, power, and other important parameters will appear here.</p>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Project Ideas</div>
+          <div class="section-content" id="projectIdeas">
+            <p class="placeholder">Example projects and integrations will appear here.</p>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Common Mistakes & Warnings</div>
+          <div class="section-content" id="commonMistakes">
+            <p class="placeholder">Typical pitfalls, overheating, polarity or wiring mistakes will appear here.</p>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Datasheet Hint</div>
+          <div class="section-content" id="datasheetHint">
+            <p class="placeholder">ElectroLens will suggest what to search to quickly find the official datasheet.</p>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Datasheet & References</div>
+          <div class="section-content" id="referencesSection">
+            <p class="placeholder">Direct datasheet links and reference pages will appear here when available.</p>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Buy Online</div>
+          <div class="section-content">
+            <div class="shop-links" id="shopLinks"></div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title">Reference Images</div>
+          <div class="section-content">
+            <div class="ref-image-grid">
+              <div class="ref-block">
+                <div class="ref-img-label">Component photo</div>
+                <img id="refImage" alt="Component photo from Google search" />
+              </div>
+              <div class="ref-block">
+                <div class="ref-img-label">Example usage / application</div>
+                <img id="usageImage" alt="Example usage or application circuit" />
+              </div>
+              <div class="ref-block">
+                <div class="ref-img-label">Pinout diagram</div>
+                <img id="pinoutImage" alt="Pinout diagram from Google search" />
+              </div>
+            </div>
+            <p class="hint" style="margin-top:6px;">
+              Images are fetched using Google search. Always confirm pinouts and connections using the official datasheet.
+            </p>
+          </div>
+        </div>
+
+        <div class="status-bar">
+          <span id="aiStatusText">Ready – choose a mode and analyze.</span>
+          <div class="loader" id="globalLoader"></div>
+        </div>
+      </section>
+    </section>
+
+    <!-- INFO STRIP -->
+    <section class="info-strip">
+      <article class="info-card">
+        <h3>1 · Vision & Identification</h3>
+        <p>Gemini inspects the image or text and identifies the most likely electronics component, module, or tool.</p>
+      </article>
+      <article class="info-card">
+        <h3>2 · Engineering Knowledge</h3>
+        <p>Groq’s Mixtral model refines the explanation, adds key specs, typical uses, project ideas, and safety notes.</p>
+      </article>
+      <article class="info-card">
+        <h3>3 · Real-World Links</h3>
+        <p>Google Custom Search retrieves real images, datasheets, and links to shops like Shopee, Lazada, and Amazon.</p>
+      </article>
+    </section>
+
+    <!-- FOOTER -->
+    <footer>
+      © 2025 ElectroLens. All Rights Reserved.
+    </footer>
+  </div>
+
+  <script>
+    // DOM references
+    const modeTabs = document.querySelectorAll(".mode-tab");
+    const modePanels = {
+      camera: document.getElementById("mode-camera"),
+      upload: document.getElementById("mode-upload"),
+      manual: document.getElementById("mode-manual"),
+    };
+
+    const video = document.getElementById("camera");
+    const cameraPreview = document.getElementById("cameraCapturePreview");
+    const analyzeCameraBtn = document.getElementById("analyzeCameraBtn");
+    const toggleCameraBtn = document.getElementById("toggleCameraBtn");
+    const cameraStatusText = document.getElementById("cameraStatusText");
+
+    const uploadDropzone = document.getElementById("uploadDropzone");
+    const uploadPrompt = document.getElementById("uploadPrompt");
+    const uploadPreview = document.getElementById("uploadPreview");
+    const fileInput = document.getElementById("fileInput");
+    const analyzeUploadBtn = document.getElementById("analyzeUploadBtn");
+
+    const manualInput = document.getElementById("manualInput");
+    const manualSearchBtn = document.getElementById("manualSearchBtn");
+
+    const canvas = document.getElementById("captureCanvas");
+
+    const deviceNameEl = document.getElementById("deviceName");
+    const deviceCategoryEl = document.getElementById("deviceCategory");
+    const descriptionEl = document.getElementById("description");
+    const typicalUsesEl = document.getElementById("typicalUses");
+    const whereToBuyEl = document.getElementById("whereToBuy");
+    const keySpecsEl = document.getElementById("keySpecs");
+    const projectIdeasEl = document.getElementById("projectIdeas");
+    const commonMistakesEl = document.getElementById("commonMistakes");
+    const datasheetHintEl = document.getElementById("datasheetHint");
+    const referencesEl = document.getElementById("referencesSection");
+    const shopLinksEl = document.getElementById("shopLinks");
+    const refImageEl = document.getElementById("refImage");
+    const usageImageEl = document.getElementById("usageImage");
+    const pinoutImageEl = document.getElementById("pinoutImage");
+    const aiStatusText = document.getElementById("aiStatusText");
+    const globalLoader = document.getElementById("globalLoader");
+
+    let cameraStream = null;
+    let analyzing = false;
+
+    // Mode switching
+    modeTabs.forEach(tab => {
+      tab.addEventListener("click", () => {
+        const mode = tab.dataset.mode;
+        modeTabs.forEach(t => t.classList.remove("active"));
+        tab.classList.add("active");
+
+        Object.keys(modePanels).forEach(key => {
+          modePanels[key].style.display = key === mode ? "block" : "none";
+        });
+
+        if (mode !== "camera") stopCamera();
+      });
+    });
+
+    // Camera
+    async function startCamera() {
+      try {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          cameraStatusText.textContent = "Camera not supported.";
+          return;
+        }
+        cameraStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "environment" }
+        });
+        video.srcObject = cameraStream;
+        analyzeCameraBtn.disabled = false;
+        cameraStatusText.textContent = "Camera active";
+        toggleCameraBtn.textContent = "⏹ Stop camera";
+      } catch (err) {
+        console.error(err);
+        cameraStatusText.textContent = "Permission denied or no camera.";
+      }
+    }
+
+    function stopCamera() {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(t => t.stop());
+        cameraStream = null;
+      }
+      video.srcObject = null;
+      analyzeCameraBtn.disabled = true;
+      cameraPreview.style.display = "none";
+      cameraStatusText.textContent = "Camera stopped";
+      toggleCameraBtn.textContent = "▶ Start camera";
+    }
+
+    toggleCameraBtn.addEventListener("click", () => {
+      if (cameraStream) stopCamera();
+      else startCamera();
+    });
+
+    analyzeCameraBtn.addEventListener("click", async () => {
+      if (!cameraStream || analyzing) return;
+      const w = video.videoWidth || 640;
+      const h = video.videoHeight || 480;
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(video, 0, 0, w, h);
+      const dataURL = canvas.toDataURL("image/jpeg", 0.85);
+
+      cameraPreview.src = dataURL;
+      cameraPreview.style.display = "block";
+      cameraStatusText.textContent = "Frame captured – analyzing…";
+
+      await analyzeWithBackend({ image: dataURL, queryText: "" });
+
+      if (cameraStream) {
+        cameraPreview.style.display = "none";
+        cameraStatusText.textContent = "Camera active";
+      }
+    });
+
+    // Upload
+    uploadDropzone.addEventListener("click", () => fileInput.click());
+
+    fileInput.addEventListener("change", e => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = evt => {
+        const dataURL = evt.target.result;
+        showUploadPreview(dataURL);
+      };
+      reader.readAsDataURL(file);
+    });
+
+    uploadDropzone.addEventListener("dragover", e => {
+      e.preventDefault();
+      uploadDropzone.classList.add("dragover");
+    });
+
+    uploadDropzone.addEventListener("dragleave", e => {
+      e.preventDefault();
+      uploadDropzone.classList.remove("dragover");
+    });
+
+    uploadDropzone.addEventListener("drop", e => {
+      e.preventDefault();
+      uploadDropzone.classList.remove("dragover");
+      const file = e.dataTransfer.files && e.dataTransfer.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = evt => {
+        const dataURL = evt.target.result;
+        showUploadPreview(dataURL);
+      };
+      reader.readAsDataURL(file);
+    });
+
+    function showUploadPreview(dataURL) {
+      uploadPreview.src = dataURL;
+      uploadPreview.style.display = "block";
+      uploadPrompt.style.display = "none";
+      analyzeUploadBtn.disabled = false;
+      analyzeUploadBtn.onclick = async () => {
+        await analyzeWithBackend({ image: dataURL, queryText: "" });
+      };
+    }
+
+    // Manual search
+    manualSearchBtn.addEventListener("click", () => {
+      const text = manualInput.value.trim();
+      if (!text || analyzing) return;
+      analyzeWithBackend({ image: null, queryText: text });
+    });
+
+    manualInput.addEventListener("keypress", e => {
+      if (e.key === "Enter") manualSearchBtn.click();
+    });
+
+    async function analyzeWithBackend(payload) {
+      analyzing = true;
+      globalLoader.style.display = "inline-block";
+      aiStatusText.textContent = "Analyzing component…";
+
+      try {
+        const res = await fetch("/api/electro-lookup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) throw new Error("Backend error");
+        const data = await res.json();
+        renderResult(data, payload.queryText || "");
+        aiStatusText.textContent = "Done – analyze another item if you like.";
+      } catch (err) {
+        console.error(err);
+        aiStatusText.textContent = "Error – check console or API configuration.";
+        descriptionEl.innerHTML =
+          '<p class="placeholder">Failed to analyze. Please verify your Gemini, Groq, and Google API keys.</p>';
+      } finally {
+        analyzing = false;
+        globalLoader.style.display = "none";
+      }
+    }
+
+    // Render helpers
+    function renderList(el, arr, emptyText) {
+      el.innerHTML = "";
+      if (!Array.isArray(arr) || arr.length === 0) {
+        el.innerHTML = `<p class="placeholder">${emptyText}</p>`;
+        return;
+      }
+      const ul = document.createElement("ul");
+      arr.forEach(item => {
+        const li = document.createElement("li");
+        li.textContent = item;
+        ul.appendChild(li);
+      });
+      el.appendChild(ul);
+    }
+
+    function renderResult(r, queryText) {
+      deviceNameEl.textContent = r.name || queryText || "Unknown device";
+      deviceCategoryEl.textContent = r.category || "Other";
+
+      // Overview
+      descriptionEl.innerHTML = "";
+      const p = document.createElement("p");
+      p.textContent = r.description || "No description available.";
+      descriptionEl.appendChild(p);
+
+      renderList(typicalUsesEl, r.typical_uses, "No typical uses listed.");
+      renderList(whereToBuyEl, r.where_to_buy, "No buying sources listed.");
+      renderList(keySpecsEl, r.key_specs, "No key specs listed.");
+      renderList(projectIdeasEl, r.project_ideas, "No project ideas listed.");
+      renderList(commonMistakesEl, r.common_mistakes, "No common mistakes listed.");
+
+      datasheetHintEl.innerHTML = "";
+      const dh = document.createElement("p");
+      dh.textContent =
+        r.datasheet_hint ||
+        "Search for the device name + 'datasheet' in your browser.";
+      datasheetHintEl.appendChild(dh);
+
+      // References
+      referencesEl.innerHTML = "";
+      let hasRefs = false;
+
+      if (r.datasheet_url) {
+        const a = document.createElement("a");
+        a.href = r.datasheet_url;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        a.className = "shop-btn";
+        a.textContent = "📄 Open datasheet";
+        referencesEl.appendChild(a);
+        hasRefs = true;
+      }
+
+      if (Array.isArray(r.references) && r.references.length > 0) {
+        r.references.forEach(ref => {
+          const wrapper = document.createElement("p");
+          const link = document.createElement("a");
+          link.href = ref.url;
+          link.target = "_blank";
+          link.rel = "noopener noreferrer";
+          link.className = "ref-link";
+          link.textContent = ref.title || ref.url;
+          wrapper.appendChild(link);
+          if (ref.snippet) {
+            const sn = document.createElement("div");
+            sn.className = "ref-snippet";
+            sn.textContent = ref.snippet;
+            wrapper.appendChild(sn);
+          }
+          referencesEl.appendChild(wrapper);
+          hasRefs = true;
+        });
+      }
+
+      if (!hasRefs) {
+        referencesEl.innerHTML =
+          '<p class="placeholder">No external references found.</p>';
+      }
+
+      // Shop links
+      shopLinksEl.innerHTML = "";
+      if (r.shop_links) {
+        if (r.shop_links.shopee) {
+          shopLinksEl.innerHTML += `<a class="shop-btn" href="${r.shop_links.shopee}" target="_blank">Shopee</a>`;
+        }
+        if (r.shop_links.lazada) {
+          shopLinksEl.innerHTML += `<a class="shop-btn" href="${r.shop_links.lazada}" target="_blank">Lazada</a>`;
+        }
+        if (r.shop_links.amazon) {
+          shopLinksEl.innerHTML += `<a class="shop-btn" href="${r.shop_links.amazon}" target="_blank">Amazon</a>`;
+        }
+        if (r.shop_links.aliexpress) {
+          shopLinksEl.innerHTML += `<a class="shop-btn" href="${r.shop_links.aliexpress}" target="_blank">AliExpress</a>`;
+        }
+      }
+      if (r.official_store) {
+        shopLinksEl.innerHTML += `<a class="shop-btn" href="${r.official_store}" target="_blank">Official store</a>`;
+      }
+      if (!shopLinksEl.innerHTML.trim()) {
+        shopLinksEl.innerHTML =
+          '<span class="placeholder">No online shop links generated.</span>';
+      }
+
+      // Reference images
+      if (r.real_image) {
+        refImageEl.src = r.real_image;
+        refImageEl.style.display = "block";
+      } else {
+        refImageEl.style.display = "none";
+      }
+
+      if (r.usage_image) {
+        usageImageEl.src = r.usage_image;
+        usageImageEl.style.display = "block";
+      } else {
+        usageImageEl.style.display = "none";
+      }
+
+      if (r.pinout_image) {
+        pinoutImageEl.src = r.pinout_image;
+        pinoutImageEl.style.display = "block";
+      } else {
+        pinoutImageEl.style.display = "none";
+      }
+    }
+
+    // Try soft camera start on load
+    window.addEventListener("load", () => {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        cameraStatusText.textContent = "Requesting camera access…";
+        startCamera();
+      } else {
+        cameraStatusText.textContent = "Camera not supported on this device.";
+      }
+    });
+  </script>
+</body>
+</html>
