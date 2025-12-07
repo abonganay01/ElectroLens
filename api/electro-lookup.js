@@ -52,63 +52,98 @@ async function googleImageSearch(query) {
   }
 }
 
-// ========== DuckDuckGo Image Search (fallback, no key) ==========
+// ========== Serper API helpers (fallback) ==========
+// Docs: https://serper.dev/  (image & web search style)
 
-async function duckduckgoImageSearch(query) {
-  if (!query) return null;
+async function serperImageSearch(query) {
+  const serperKey = process.env.SERPER_API_KEY;
+  if (!serperKey || !query) return null;
 
   try {
-    // Step 1: get vqd token
-    const initRes = await fetch(
-      `https://duckduckgo.com/?q=${encodeURIComponent(
-        query
-      )}&iax=images&ia=images`,
-      {
-        headers: {
-          // Simple user-agent to avoid being blocked
-          "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        }
-      }
-    );
+    const res = await fetch("https://google.serper.dev/images", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-API-KEY": serperKey
+      },
+      body: JSON.stringify({
+        q: query,
+        num: 1
+      })
+    });
 
-    const html = await initRes.text();
-    const tokenMatch = html.match(/vqd=([\d-]+)/);
-    if (!tokenMatch) {
-      console.error("DuckDuckGo: vqd token not found");
+    if (!res.ok) {
+      console.error("Serper image search HTTP error:", res.status);
       return null;
     }
 
-    const vqd = tokenMatch[1];
+    const data = await res.json();
+    const first = Array.isArray(data.images) ? data.images[0] : null;
+    if (!first) return null;
 
-    // Step 2: fetch images JSON
-    const apiRes = await fetch(
-      `https://duckduckgo.com/i.js?l=us-en&o=json&q=${encodeURIComponent(
-        query
-      )}&vqd=${vqd}`,
-      {
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-          Referer: "https://duckduckgo.com/"
-        }
-      }
-    );
-
-    if (!apiRes.ok) {
-      console.error("DuckDuckGo image HTTP error:", apiRes.status);
-      return null;
-    }
-
-    const data = await apiRes.json();
-    return data.results?.[0]?.image || null;
+    // Serper usually returns imageUrl / thumbnailUrl / link-like fields.
+    return first.imageUrl || first.thumbnailUrl || first.link || null;
   } catch (err) {
-    console.error("DuckDuckGo image search error:", err);
+    console.error("Serper image search error:", err);
     return null;
   }
 }
 
-// unified helper: Google first, then DuckDuckGo
+async function serperDatasheetSearch(query) {
+  const serperKey = process.env.SERPER_API_KEY;
+  if (!serperKey || !query) {
+    return { datasheetUrl: null, references: [] };
+  }
+
+  try {
+    const res = await fetch("https://google.serper.dev/search", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-API-KEY": serperKey
+      },
+      body: JSON.stringify({
+        q: `${query} datasheet pdf`,
+        num: 5
+      })
+    });
+
+    if (!res.ok) {
+      console.error("Serper datasheet search HTTP error:", res.status);
+      return { datasheetUrl: null, references: [] };
+    }
+
+    const data = await res.json();
+    const organic = Array.isArray(data.organic) ? data.organic : [];
+
+    let datasheetUrl = null;
+    const references = [];
+
+    for (const item of organic) {
+      const link = item.link || "";
+      if (
+        !datasheetUrl &&
+        (link.endsWith(".pdf") || link.toLowerCase().includes("datasheet"))
+      ) {
+        datasheetUrl = link;
+      }
+      if (references.length < 4) {
+        references.push({
+          title: item.title || "",
+          url: link,
+          snippet: item.snippet || item.snippetHighlighted || ""
+        });
+      }
+    }
+
+    return { datasheetUrl, references };
+  } catch (err) {
+    console.error("Serper datasheet search error:", err);
+    return { datasheetUrl: null, references: [] };
+  }
+}
+
+// unified helper: Google first, then Serper (fallback)
 async function smartImageSearch(query) {
   if (!query) return null;
 
@@ -117,9 +152,9 @@ async function smartImageSearch(query) {
   if (url) return url;
 
   console.warn(
-    "Google image search failed or quota exceeded – falling back to DuckDuckGo."
+    "Google image search failed or quota exceeded – falling back to Serper."
   );
-  url = await duckduckgoImageSearch(query);
+  url = await serperImageSearch(query);
   return url || null;
 }
 
@@ -140,7 +175,7 @@ async function fetchPinoutImageFromGoogle(nameOrQuery) {
   return smartImageSearch(q);
 }
 
-async function fetchDatasheetAndReferences(name) {
+async function googleDatasheetAndReferences(name) {
   const apiKey = process.env.CSE_API_KEY;
   const cx = process.env.CSE_CX;
   if (!apiKey || !cx || !name) return { datasheetUrl: null, references: [] };
@@ -183,6 +218,40 @@ async function fetchDatasheetAndReferences(name) {
     console.error("Datasheet search error:", err);
     return { datasheetUrl: null, references: [] };
   }
+}
+
+// Combined: Google first, Serper as fallback
+async function fetchDatasheetAndReferences(name) {
+  if (!name) return { datasheetUrl: null, references: [] };
+
+  // 1) Try Google CSE
+  let { datasheetUrl, references } = await googleDatasheetAndReferences(name);
+
+  const needsFallback =
+    !datasheetUrl || !Array.isArray(references) || references.length === 0;
+
+  if (!needsFallback) {
+    return { datasheetUrl, references };
+  }
+
+  console.warn(
+    "Google datasheet search insufficient – falling back to Serper for datasheet & references."
+  );
+
+  // 2) Fallback to Serper
+  const serperResult = await serperDatasheetSearch(name);
+
+  // Prefer any datasheet URL that exists (Serper can fill missing one)
+  if (!datasheetUrl && serperResult.datasheetUrl) {
+    datasheetUrl = serperResult.datasheetUrl;
+  }
+
+  // If references are empty, use Serper's
+  if (!Array.isArray(references) || references.length === 0) {
+    references = serperResult.references || [];
+  }
+
+  return { datasheetUrl, references };
 }
 
 // ========== Shop links ==========
@@ -419,12 +488,12 @@ Return STRICT JSON ONLY in this shape:
       safeQueryText ||
       "electronics component";
 
-    // Images (Google first, DuckDuckGo fallback)
+    // Images (Google first, Serper fallback)
     baseJson.real_image = await fetchRealImageFromGoogle(nameOrQuery);
     baseJson.usage_image = await fetchUsageImageFromGoogle(nameOrQuery);
     baseJson.pinout_image = await fetchPinoutImageFromGoogle(nameOrQuery);
 
-    // Datasheet + references
+    // Datasheet + references (Google first, Serper fallback)
     const ds = await fetchDatasheetAndReferences(
       baseJson.name || safeQueryText || ""
     );
