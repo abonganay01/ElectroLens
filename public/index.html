@@ -350,27 +350,6 @@
     .reticle::before { top: -2px; left: -2px; border-width: 3px 0 0 3px; border-radius: 4px 0 0 0; }
     .reticle::after { bottom: -2px; right: -2px; border-width: 0 3px 3px 0; border-radius: 0 0 4px 0; }
     
-    /* Extra corners using divs or pseudo elements if needed, sticking to two for simplicity */
-    
-    .scan-line {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 2px;
-        background: var(--primary);
-        box-shadow: 0 0 10px var(--primary);
-        animation: scan 2s linear infinite;
-        opacity: 0.6;
-    }
-    
-    @keyframes scan {
-        0% { top: 0%; opacity: 0; }
-        20% { opacity: 1; }
-        80% { opacity: 1; }
-        100% { top: 100%; opacity: 0; }
-    }
-
     /* Controls */
     .control-row {
         display: flex;
@@ -378,28 +357,47 @@
         margin-top: 1rem;
     }
 
-    .btn-primary, .btn-secondary {
+    .btn-primary {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        gap: 0.5rem;
-        padding: 0.75rem 1.25rem;
+        gap: 0.6rem;
+        padding: 0.75rem 1.5rem;
         border-radius: var(--radius-md);
-        font-size: 0.9rem;
+        font-size: 0.95rem;
         font-weight: 600;
         cursor: pointer;
-        transition: transform 0.1s, box-shadow 0.2s, background 0.2s;
-        border: none;
-        flex: 1;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        flex: 2;
+        background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+        color: white;
+        box-shadow: 0 4px 15px var(--primary-glow), inset 0 1px 0 rgba(255,255,255,0.2);
+        text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .btn-primary::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+        transition: 0.5s;
     }
 
-    .btn-primary {
-        background: var(--primary);
-        color: white;
-        flex: 2;
-        box-shadow: 0 4px 12px var(--primary-glow);
+    .btn-primary:hover:not(:disabled)::after {
+        left: 100%;
     }
-    .btn-primary:hover:not(:disabled) { background: var(--primary-hover); transform: translateY(-1px); }
+
+    .btn-primary:hover:not(:disabled) { 
+        transform: translateY(-2px); 
+        box-shadow: 0 8px 25px var(--primary-glow);
+        filter: brightness(1.1);
+    }
     .btn-primary:active:not(:disabled) { transform: translateY(0); }
     .btn-primary:disabled { 
         background: var(--bg-element); 
@@ -408,6 +406,47 @@
         cursor: not-allowed; 
         box-shadow: none; 
         transform: none;
+        background-image: none;
+    }
+
+    /* Updated Camera Toggle Button Design */
+    .btn-camera-toggle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.6rem;
+        padding: 0.75rem 1rem;
+        border-radius: var(--radius-md);
+        font-size: 0.9rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        border: 1px solid transparent;
+        flex: 1;
+    }
+
+    /* Start State (Green) */
+    .btn-camera-toggle.start {
+        background: rgba(16, 185, 129, 0.1); /* Emerald-500 tint */
+        color: #10b981;
+        border-color: rgba(16, 185, 129, 0.3);
+    }
+    .btn-camera-toggle.start:hover {
+        background: rgba(16, 185, 129, 0.15);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+    }
+
+    /* Stop State (Red) */
+    .btn-camera-toggle.stop {
+        background: rgba(239, 68, 68, 0.1); /* Red-500 tint */
+        color: #ef4444;
+        border-color: rgba(239, 68, 68, 0.3);
+    }
+    .btn-camera-toggle.stop:hover {
+        background: rgba(239, 68, 68, 0.15);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15);
     }
 
     .btn-secondary {
@@ -799,20 +838,20 @@
           <img id="cameraCapturePreview" class="viewport-img" style="display:none;" />
           
           <div class="viewport-overlay" id="camOverlay">
-            <div class="reticle">
-                <div class="scan-line"></div>
-            </div>
-            <p style="margin-top:1rem; font-size:0.75rem; color:rgba(255,255,255,0.7); font-weight:500;">Center component in frame</p>
+            <!-- Clean viewfinder: No reticle or text -->
           </div>
         </div>
         <div style="margin-top:1rem; display: flex; justify-content: space-between; align-items: center;">
             <span id="cameraStatusText" style="font-size:0.75rem; color:var(--text-dim); font-family:var(--font-mono);">STATUS: IDLE</span>
         </div>
         <div class="control-row">
-            <button class="btn-secondary" id="toggleCameraBtn">Stop</button>
+            <button class="btn-camera-toggle start" id="toggleCameraBtn">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                Start Camera
+            </button>
             <button class="btn-primary" id="analyzeCameraBtn">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="4"></circle><line x1="21.17" y1="8" x2="12" y2="8"></line></svg>
-                Scan Component
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                Scan & Analyze
             </button>
         </div>
       </div>
@@ -1086,6 +1125,12 @@
   let cameraStream = null;
   let isAnalyzing = false;
 
+  // Icons for JS
+  const ICONS = {
+    play: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>`,
+    stop: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect></svg>`
+  };
+
   // Camera Logic
   async function startCamera() {
     try {
@@ -1125,7 +1170,11 @@
         camOverlay.style.display = "flex";
         
         analyzeCameraBtn.disabled = false;
-        toggleCameraBtn.textContent = "Stop";
+        
+        // UPDATE BUTTON STATE
+        toggleCameraBtn.innerHTML = `${ICONS.stop} Stop Camera`;
+        toggleCameraBtn.className = "btn-camera-toggle stop";
+        
         cameraStatusText.textContent = "STATUS: ACTIVE";
     } catch (err) {
         console.error("Camera Error:", err);
@@ -1145,7 +1194,11 @@
         cameraStream = null;
     }
     video.style.display = "none";
-    toggleCameraBtn.textContent = "Start";
+    
+    // UPDATE BUTTON STATE
+    toggleCameraBtn.innerHTML = `${ICONS.play} Start Camera`;
+    toggleCameraBtn.className = "btn-camera-toggle start";
+    
     cameraStatusText.textContent = "STATUS: STOPPED";
   }
 
