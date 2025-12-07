@@ -1,5 +1,3 @@
-// api/electro-lookup.js
-
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import fetch from "node-fetch";
 
@@ -323,13 +321,13 @@ If the object is clearly NOT electronics, mark category as "Other".
 
     let baseJson;
     try {
-      // match your original working style: .response.text
-      const jsonString = geminiResp.response.text
+      // FIX: Added parentheses .text() to call the function
+      const jsonString = geminiResp.response.text()
         .replace(/```json\n?|```/g, "")
         .trim();
       baseJson = JSON.parse(jsonString);
     } catch (err) {
-      console.error("Failed to parse Gemini JSON:", geminiResp.response.text);
+      console.error("Failed to parse Gemini JSON. Raw response:", geminiResp.response.text());
       return res
         .status(500)
         .json({ error: "Failed to parse Gemini response as JSON." });
