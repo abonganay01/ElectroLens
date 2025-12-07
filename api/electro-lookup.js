@@ -62,80 +62,8 @@ function isQuotaStatus(status) {
   return status === 429 || status === 402 || status === 403;
 }
 
-// ========== Google Custom Search helpers ==========
-
-async function googleImageSearch(query, quotaWarnings = []) {
-  const apiKey = process.env.CSE_API_KEY;
-  const cx = process.env.CSE_CX;
-  if (!apiKey || !cx || !query) return null;
-
-  const url = `https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(
-    query
-  )}&searchType=image&num=1&safe=active&key=${apiKey}&cx=${cx}`;
-
-  try {
-    const res = await fetch(url);
-    if (!res.ok) {
-      console.error("Image search HTTP error (Google):", res.status);
-      if (isQuotaStatus(res.status)) {
-        quotaWarnings.push({
-          source: "google_cse_images",
-          status: res.status,
-          message: "Google Custom Search image quota or billing limit reached.",
-        });
-      }
-      return null;
-    }
-    const data = await res.json();
-    return data.items?.[0]?.link || null;
-  } catch (err) {
-    console.error("Google image search error:", err);
-    return null;
-  }
-}
-
-// ========== Serper API helpers (fallback, no DuckDuckGo) ==========
+// ========== Serper API helpers (for datasheets & references only) ==========
 // Docs: https://serper.dev
-
-async function serperImageSearch(query, quotaWarnings = []) {
-  const serperKey = process.env.SERPER_API_KEY;
-  if (!serperKey || !query) return null;
-
-  try {
-    const res = await fetch("https://google.serper.dev/images", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-API-KEY": serperKey,
-      },
-      body: JSON.stringify({
-        q: query,
-        num: 1,
-      }),
-    });
-
-    if (!res.ok) {
-      console.error("Serper image search HTTP error:", res.status);
-      if (isQuotaStatus(res.status)) {
-        quotaWarnings.push({
-          source: "serper_images",
-          status: res.status,
-          message: "Serper image search quota or billing limit reached.",
-        });
-      }
-      return null;
-    }
-
-    const data = await res.json();
-    const first = Array.isArray(data.images) ? data.images[0] : null;
-    if (!first) return null;
-
-    return first.imageUrl || first.thumbnailUrl || first.link || null;
-  } catch (err) {
-    console.error("Serper image search error:", err);
-    return null;
-  }
-}
 
 async function serperDatasheetSearch(query, quotaWarnings = []) {
   const serperKey = process.env.SERPER_API_KEY;
@@ -198,39 +126,7 @@ async function serperDatasheetSearch(query, quotaWarnings = []) {
   }
 }
 
-// unified helper: Google first, then Serper
-async function smartImageSearch(query, quotaWarnings = []) {
-  if (!query) return null;
-
-  // Try Google CSE first
-  let url = await googleImageSearch(query, quotaWarnings);
-  if (url) return url;
-
-  console.warn(
-    "Google image search failed or quota exceeded – falling back to Serper."
-  );
-  url = await serperImageSearch(query, quotaWarnings);
-  return url || null;
-}
-
-// Wrappers that keep your original function names
-async function fetchRealImageFromGoogle(nameOrQuery, quotaWarnings = []) {
-  return smartImageSearch(nameOrQuery, quotaWarnings);
-}
-
-async function fetchUsageImageFromGoogle(nameOrQuery, quotaWarnings = []) {
-  // try to get an application / example circuit image
-  const q = `${nameOrQuery} application circuit electronics example`;
-  return smartImageSearch(q, quotaWarnings);
-}
-
-async function fetchPinoutImageFromGoogle(nameOrQuery, quotaWarnings = []) {
-  // try to get a pinout diagram
-  const q = `${nameOrQuery} pinout diagram`;
-  return smartImageSearch(q, quotaWarnings);
-}
-
-// ---------- Datasheets & references: Google first, Serper fallback ----------
+// ---------- Datasheets & references: Google CSE first, Serper fallback ----------
 
 async function googleDatasheetAndReferences(name, quotaWarnings = []) {
   const apiKey = process.env.CSE_API_KEY;
@@ -569,6 +465,94 @@ Return STRICT JSON ONLY in this shape:
   }
 }
 
+// ========== Gemini-based image URL search ==========
+// Uses Gemini to find representative image URLs for the component/module.
+
+async function fetchImagesWithGemini(nameOrQuery, quotaWarnings = []) {
+  const geminiKey = process.env.GOOGLE_API_KEY;
+  if (!geminiKey || !nameOrQuery) {
+    return {
+      real_image: null,
+      usage_image: null,
+      pinout_image: null,
+    };
+  }
+
+  const prompt = `
+You are ElectroLens, an assistant specialized in electronics.
+
+Given this component or module name:
+
+"${nameOrQuery}"
+
+Use your knowledge and web tools to find up to 3 representative image URLs:
+
+- "real_image": a realistic photo of the actual part or module.
+- "usage_image": a photo or illustration showing how it is used in a circuit or project.
+- "pinout_image": a schematic-style pinout or labeled diagram, if it exists.
+
+Return STRICT JSON ONLY with this exact shape:
+
+{
+  "real_image": "https://...",
+  "usage_image": "https://...",
+  "pinout_image": "https://..."
+}
+
+Rules:
+- If you cannot find a URL for a field, set that field to null.
+- Use only direct HTTPS URLs to publicly viewable image files (jpg, jpeg, png, webp).
+- Do NOT invent domains. Prefer official or well-known sites if possible.
+`;
+
+  try {
+    const genAI = new GoogleGenerativeAI(geminiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+    const resp = await model.generateContent({
+      contents: [
+        {
+          role: "user",
+          parts: [{ text: prompt }],
+        },
+      ],
+      generationConfig: { responseMimeType: "application/json" },
+    });
+
+    const text = resp.response.text();
+    const parsed = JSON.parse(text);
+
+    return {
+      real_image: parsed.real_image || null,
+      usage_image: parsed.usage_image || null,
+      pinout_image: parsed.pinout_image || null,
+    };
+  } catch (err) {
+    const msg = String(err || "");
+    const isQuotaError =
+      msg.includes("429") ||
+      msg.includes("You exceeded your current quota") ||
+      msg.includes("Quota exceeded for metric");
+
+    if (isQuotaError) {
+      quotaWarnings.push({
+        source: "gemini_images",
+        status: 429,
+        message:
+          "Gemini quota exceeded for image URL lookup. Image URLs may be missing.",
+      });
+    } else {
+      console.error("Gemini image fetch error:", err);
+    }
+
+    return {
+      real_image: null,
+      usage_image: null,
+      pinout_image: null,
+    };
+  }
+}
+
 // ========== Main handler ==========
 
 export default async function handler(req, res) {
@@ -733,21 +717,13 @@ Return STRICT JSON ONLY in this shape:
       safeQueryText ||
       "electronics component";
 
-    // Images (Google first, Serper fallback)
-    baseJson.real_image = await fetchRealImageFromGoogle(
-      nameOrQuery,
-      quotaWarnings
-    );
-    baseJson.usage_image = await fetchUsageImageFromGoogle(
-      nameOrQuery,
-      quotaWarnings
-    );
-    baseJson.pinout_image = await fetchPinoutImageFromGoogle(
-      nameOrQuery,
-      quotaWarnings
-    );
+    // Images via Gemini (your request): real, usage, pinout
+    const imgResult = await fetchImagesWithGemini(nameOrQuery, quotaWarnings);
+    baseJson.real_image = imgResult.real_image;
+    baseJson.usage_image = imgResult.usage_image;
+    baseJson.pinout_image = imgResult.pinout_image;
 
-    // Datasheet + references (Google first, Serper fallback)
+    // Datasheet + references (Google CSE first, Serper fallback)
     const ds = await fetchDatasheetAndReferences(
       baseJson.name || safeQueryText || "",
       quotaWarnings
