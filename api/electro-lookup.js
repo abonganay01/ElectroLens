@@ -1,10 +1,23 @@
 // api/electro-lookup.js
 
 // Uses Node runtime (Vercel serverless / Node, NOT Edge)
-import { GoogleGenerativeAI } from "@google-generative-ai/google-generative-ai" ?? "@google/generative-ai";
-// ^ If your project already uses "@google/generative-ai", keep that import instead
-// and remove the alternative. Example:
-// import { GoogleGenerativeAI } from "@google/generative-ai";
+// Dynamic loader for Google Generative AI SDK.
+// Tries the modern package name first, then falls back to the older one.
+async function loadGoogleGenerativeAI() {
+  try {
+    const mod = await import("@google-generative-ai/google-generative-ai");
+    return mod.GoogleGenerativeAI || mod.default || mod;
+  } catch (err1) {
+    try {
+      const mod = await import("@google/generative-ai");
+      return mod.GoogleGenerativeAI || mod.default || mod;
+    } catch (err2) {
+      throw new Error(
+        "Google Generative AI SDK not found. Install '@google-generative-ai/google-generative-ai' or '@google/generative-ai'."
+      );
+    }
+  }
+}
 
 // ---------------------------------------------------------
 // Vercel / Next API config: disable automatic body parsing
@@ -642,6 +655,7 @@ Return STRICT JSON ONLY:
 `;
 
   try {
+    const GoogleGenerativeAI = await loadGoogleGenerativeAI();
     const genAI = new GoogleGenerativeAI(geminiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
@@ -747,6 +761,7 @@ export default async function handler(req, res) {
         });
       }
 
+      const GoogleGenerativeAI = await loadGoogleGenerativeAI();
       const genAI = new GoogleGenerativeAI(geminiKey);
       const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
@@ -853,10 +868,9 @@ Return STRICT JSON ONLY with:
           });
           baseJson = await groqDescribeFromText(safeQueryText, quotaWarnings);
         } else {
+          const GoogleGenerativeAI = await loadGoogleGenerativeAI();
           const genAI = new GoogleGenerativeAI(geminiKey);
-          const model = genAI.getGenerativeModel({
-            model: "gemini-2.5-flash",
-          });
+          const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
           const basePrompt = `
 You are ElectroLens, an assistant specialized ONLY in electronics-related items.
