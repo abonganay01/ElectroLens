@@ -3,72 +3,116 @@
 <head>
   <meta charset="UTF-8" />
   <title>ElectroLens – AI Electronics Encyclopedia</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
   <style>
     /* -------------------------------------- */
-    /* ROOT VARIABLES (Dark Mode Default) */
+    /* ROOT VARIABLES */
     /* -------------------------------------- */
     :root {
-        --bg: #0C0D11;
-        --panel: #14161A;
-        --panel-soft: #1E2125;
-        --accent: #5C7CFA;
-        --accent-dark: #3F60D5;
-        --border: rgba(148, 163, 184, 0.15);
-        --text: #F1F3F5;
-        --muted: #A0AEC0;
-        --radius-lg: 24px;
-        --radius-md: 16px;
-        --radius-sm: 8px;
-        --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.5), 0 2px 5px rgba(0, 0, 0, 0.5);
-        --shadow-card: 0 16px 36px rgba(0, 0, 0, 0.5), 0 4px 8px rgba(0, 0, 0, 0.3);
+        /* Dark Mode (Default) */
+        --bg-body: #09090b;
+        --bg-panel: #18181b;
+        --bg-panel-translucent: rgba(24, 24, 27, 0.85);
+        --bg-element: #27272a;
+        --bg-element-hover: #3f3f46;
+        
+        --border: #3f3f46;
+        --border-light: rgba(255, 255, 255, 0.1);
+        
+        --primary: #3b82f6;
+        --primary-hover: #60a5fa;
+        --primary-dim: rgba(59, 130, 246, 0.15);
+        --primary-glow: rgba(59, 130, 246, 0.4);
+        
+        --text-main: #f4f4f5;
+        --text-muted: #a1a1aa;
+        --text-dim: #71717a;
+
+        --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+        --font-mono: 'JetBrains Mono', monospace;
+
+        --radius-xl: 20px;
+        --radius-lg: 12px;
+        --radius-md: 8px;
+        --radius-sm: 6px;
+
+        --shadow-glow: 0 0 20px rgba(59, 130, 246, 0.15);
+        --shadow-card: 0 8px 30px rgba(0, 0, 0, 0.3);
+        
+        --gradient-overlay: linear-gradient(to top, rgba(0,0,0,0.9), transparent 60%);
     }
 
-    /* -------------------------------------- */
-    /* LIGHT MODE OVERRIDES */
-    /* -------------------------------------- */
+    /* Light Mode Overrides */
     :root[data-theme="light"] {
-        --bg: #F4F7FB;
-        --panel: #FFFFFF;
-        --panel-soft: #F9FAFC;
-        --accent: #4F69F8;
-        --accent-dark: #354FC2;
-        --border: rgba(148, 163, 184, 0.3);
-        --text: #1A202C;
-        --muted: #6B7280;
-        --shadow-soft: 0 6px 16px rgba(0, 0, 0, 0.08);
-        --shadow-card: 0 12px 28px rgba(0, 0, 0, 0.1);
+        --bg-body: #f1f5f9;
+        --bg-panel: #ffffff;
+        --bg-panel-translucent: rgba(255, 255, 255, 0.9);
+        --bg-element: #f8fafc;
+        --bg-element-hover: #e2e8f0;
+        
+        --border: #cbd5e1;
+        --border-light: rgba(0, 0, 0, 0.05);
+        
+        --primary: #2563eb;
+        --primary-hover: #1d4ed8;
+        --primary-dim: rgba(37, 99, 235, 0.1);
+        --primary-glow: rgba(37, 99, 235, 0.2);
+        
+        --text-main: #0f172a;
+        --text-muted: #475569;
+        --text-dim: #94a3b8;
+
+        --shadow-glow: 0 4px 20px rgba(37, 99, 235, 0.15);
+        --shadow-card: 0 10px 40px -10px rgba(0, 0, 0, 0.08);
+
+        --gradient-overlay: linear-gradient(to top, rgba(255,255,255,0.9), transparent 60%);
     }
 
     /* -------------------------------------- */
-    /* BASE STYLES */
+    /* RESET & BASE */
     /* -------------------------------------- */
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * { box-sizing: border-box; margin: 0; padding: 0; outline: none; }
 
     body {
-        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Inter", sans-serif;
+        font-family: var(--font-sans);
+        background-color: var(--bg-body);
+        color: var(--text-main);
         min-height: 100vh;
-        background: radial-gradient(circle at top, var(--bg) 0%, #D8DCE3 80%, #C9CED5 100%);
-        color: var(--text);
         display: flex;
-        justify-content: center;
-        padding: 30px 20px;
-        transition: background 0.4s ease, color 0.3s ease;
-        line-height: 1.6;
-        font-size: 14px;
+        flex-direction: column;
+        align-items: center;
+        padding: 2rem 1.5rem;
+        transition: background-color 0.3s ease, color 0.3s ease;
     }
 
-    :root[data-theme="dark"] body {
-        background: radial-gradient(circle at top, #14161A, var(--bg) 70%, #000 100%);
+    /* Dot Pattern Background */
+    body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        z-index: -1;
+        background-image: radial-gradient(var(--border) 1px, transparent 1px);
+        background-size: 24px 24px;
+        opacity: 0.2;
+        mask-image: radial-gradient(circle at center, black 40%, transparent 100%);
     }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; border: 2px solid var(--bg-panel); }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
     .shell {
         width: 100%;
         max-width: 1280px;
         display: flex;
         flex-direction: column;
-        gap: 24px;
+        gap: 1.5rem;
     }
 
     /* -------------------------------------- */
@@ -76,1497 +120,1177 @@
     /* -------------------------------------- */
     .site-header {
         display: flex;
-        align-items: center;
         justify-content: space-between;
-        gap: 15px;
-        padding: 0 4px;
+        align-items: center;
+        padding: 0 0.5rem;
     }
 
     .brand {
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: 1rem;
     }
 
-    .logo-placeholder {
-        width: 48px;
-        height: 48px;
-        border-radius: 16px;
-        background: linear-gradient(135deg, var(--accent), var(--accent-dark));
-        border: 1px solid var(--accent);
+    .logo-box {
+        width: 42px;
+        height: 42px;
+        background: var(--primary);
+        border-radius: var(--radius-md);
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 24px;
+        font-size: 1.25rem;
         color: white;
-        box-shadow: 0 10px 20px rgba(92, 124, 250, 0.4);
+        box-shadow: var(--shadow-glow);
+        transition: transform 0.2s;
+    }
+    
+    .brand:hover .logo-box { transform: scale(1.05) rotate(5deg); }
+
+    .brand-info h1 {
+        font-size: 1.25rem;
         font-weight: 700;
+        letter-spacing: -0.02em;
+        line-height: 1.1;
+        color: var(--text-main);
     }
 
-    :root[data-theme="light"] .logo-placeholder {
-        box-shadow: 0 8px 18px rgba(79, 105, 248, 0.25);
-    }
-
-    .brand-title {
-        font-size: 24px;
-        font-weight: 700;
-        letter-spacing: 0.01em;
-        line-height: 1.2;
-    }
-
-    .brand-highlight { color: var(--accent); }
-
-    .brand-subtitle {
-        font-size: 13px;
-        color: var(--muted);
-        margin-top: 2px;
-    }
-
-    .header-right {
-        display: flex;
-        align-items: center;
-        gap: 20px;
-    }
-
-    .nav-links {
-        display: flex;
-        gap: 18px;
-        font-size: 13px;
-        color: var(--muted);
-        opacity: 0.95;
-    }
-    .nav-links span {
-        cursor: pointer;
-        transition: color 0.2s ease;
-    }
-    .nav-links span:hover {
-        color: var(--accent);
-    }
-
-    .theme-toggle-icon {
-        width: 38px;
-        height: 38px;
-        border-radius: 50%;
-        border: 1px solid var(--border);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: var(--panel-soft);
-        cursor: pointer;
-        font-size: 18px;
-        box-shadow: var(--shadow-soft);
-        transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.2s ease;
-    }
-
-    .theme-toggle-icon:hover {
-        transform: scale(1.05);
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
-    }
-
-    :root[data-theme="light"] .theme-toggle-icon:hover {
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-    }
-
-    /* -------------------------------------- */
-    /* TOP STRIP (small hero bar) */
-    /* -------------------------------------- */
-    .top-strip {
-        border-radius: var(--radius-lg);
-        border: 1px solid var(--border);
-        background: radial-gradient(circle at top left, rgba(92, 124, 250, 0.15), var(--panel-soft) 60%);
-        padding: 16px 20px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 20px;
-        box-shadow: var(--shadow-soft);
-    }
-
-    :root[data-theme="light"] .top-strip {
-        background: radial-gradient(circle at top left, rgba(79, 105, 248, 0.1), var(--panel-soft) 60%);
-    }
-
-    .top-strip-left {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-    }
-
-    .badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 4px 10px;
-        border-radius: 999px;
-        border: 1px solid var(--border);
-        background: var(--panel);
-        color: var(--muted);
-        font-size: 11px;
+    .brand-info p {
+        font-size: 0.8rem;
+        color: var(--text-muted);
         font-weight: 500;
     }
 
-    :root[data-theme="light"] .badge {
-        background: var(--panel-soft);
+    .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
     }
 
-    .badge-dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: #10B981;
-        box-shadow: 0 0 8px rgba(16, 185, 129, 0.7);
+    .nav-link {
+        font-size: 0.875rem;
+        color: var(--text-muted);
+        text-decoration: none;
+        font-weight: 500;
+        transition: color 0.2s;
+        display: none;
+        cursor: pointer;
     }
+    .nav-link:hover { color: var(--primary); }
+    @media (min-width: 768px) { .nav-link { display: block; } }
 
-    .top-title {
-        font-size: 18px;
-        font-weight: 600;
-    }
-
-    .top-title span {
-        background: linear-gradient(120deg, var(--accent), #4BC0DA);
-        -webkit-background-clip: text;
-        background-clip: text;
-        color: transparent;
-    }
-
-    .top-text {
-        font-size: 13px;
-        color: var(--muted);
-    }
-
-    .top-strip-right {
-        font-size: 12px;
-        color: var(--muted);
-        text-align: right;
-        max-width: 250px;
-        line-height: 1.4;
-    }
-
-    /* -------------------------------------- */
-    /* DASHBOARD LAYOUT */
-    /* -------------------------------------- */
-    .dashboard {
-        border-radius: var(--radius-lg);
+    .theme-toggle {
+        background: var(--bg-element);
         border: 1px solid var(--border);
-        background: var(--panel);
-        padding: 16px;
+        color: var(--text-muted);
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+    .theme-toggle:hover {
+        background: var(--bg-element-hover);
+        color: var(--text-main);
+        border-color: var(--text-muted);
+        transform: rotate(15deg);
+    }
+
+    /* -------------------------------------- */
+    /* MAIN GRID LAYOUT */
+    /* -------------------------------------- */
+    .dashboard-grid {
         display: grid;
-        grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
-        gap: 16px;
-        min-height: 70vh;
-        box-shadow: var(--shadow-card);
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+        min-height: 600px;
     }
 
-    :root[data-theme="light"] .dashboard {
-        background: var(--panel-soft);
-    }
-
-    @media (max-width: 900px) {
-        .dashboard {
-            grid-template-columns: 1fr;
+    @media (min-width: 1024px) {
+        .dashboard-grid {
+            grid-template-columns: 380px 1fr;
+            align-items: start;
         }
     }
 
+    /* -------------------------------------- */
+    /* CARDS & PANELS */
+    /* -------------------------------------- */
     .card {
-        border-radius: var(--radius-md);
+        background: var(--bg-panel-translucent);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
         border: 1px solid var(--border);
-        background: var(--panel-soft);
-        padding: 16px;
+        border-radius: var(--radius-xl);
+        padding: 1.5rem;
         display: flex;
         flex-direction: column;
-        min-height: 0;
-        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.3);
-    }
-
-    :root[data-theme="light"] .card {
-        background: var(--panel);
-        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.05);
+        gap: 1.25rem;
+        box-shadow: var(--shadow-card);
+        height: 100%;
+        position: relative;
+        transition: border-color 0.3s ease, background-color 0.3s ease;
     }
 
     .card-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 10px;
     }
 
-    .card-label {
-        font-size: 12px;
+    .card-title {
+        font-size: 0.75rem;
         text-transform: uppercase;
-        letter-spacing: 0.1em;
-        font-weight: 600;
-        color: var(--muted);
+        letter-spacing: 0.08em;
+        font-weight: 700;
+        color: var(--text-dim);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
     }
 
-    .card-tag {
-        font-size: 11px;
-        padding: 4px 10px;
-        border-radius: 999px;
-        background: var(--panel);
-        border: 1px solid var(--border);
-        color: var(--text);
-    }
-
-    :root[data-theme="light"] .card-tag {
-        background: #EEF2FF;
-        color: var(--accent-dark);
-        border-color: rgba(79, 105, 248, 0.5);
+    .card-title::before {
+        content: '';
+        width: 6px;
+        height: 6px;
+        background: var(--primary);
+        border-radius: 50%;
+        box-shadow: 0 0 8px var(--primary);
     }
 
     /* -------------------------------------- */
-    /* LEFT PANEL (INPUT) */
+    /* LEFT COLUMN: INPUTS */
     /* -------------------------------------- */
-    .mode-tabs {
-        display: inline-flex;
-        border-radius: 999px;
-        border: 1px solid var(--border);
-        background: var(--panel);
+    .mode-switcher {
+        display: flex;
+        background: var(--bg-element);
         padding: 4px;
-        margin-bottom: 10px;
-    }
-
-    :root[data-theme="light"] .mode-tabs {
-        background: #F3F4F6;
-    }
-
-    .mode-tab {
-        border-radius: 999px;
-        border: none;
-        background: transparent;
-        font-size: 13px;
-        font-weight: 500;
-        color: var(--muted);
-        padding: 8px 16px;
-        cursor: pointer;
-        transition: 0.2s;
-        white-space: nowrap;
-    }
-
-    .mode-tab.active {
-        background: var(--panel-soft);
-        color: var(--text);
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-    }
-
-    :root[data-theme="light"] .mode-tab.active {
-        background: #ffffff;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-    }
-
-    .mode-panel { margin-top: 4px; }
-
-    .camera-shell {
-        border-radius: var(--radius-md);
+        border-radius: var(--radius-lg);
+        gap: 4px;
         border: 1px solid var(--border);
-        background: var(--panel);
-        padding: 10px;
     }
 
-    :root[data-theme="light"] .camera-shell {
-        background: #F9FAFB;
+    .mode-btn {
+        flex: 1;
+        background: transparent;
+        border: none;
+        padding: 8px;
+        border-radius: var(--radius-md);
+        font-size: 0.8rem;
+        font-weight: 500;
+        color: var(--text-muted);
+        cursor: pointer;
+        transition: all 0.2s;
     }
 
-    .glass-frame {
+    .mode-btn:hover { color: var(--text-main); }
+    .mode-btn.active {
+        background: var(--bg-panel);
+        color: var(--primary);
+        font-weight: 600;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    /* Camera Viewport */
+    .viewport-container {
         position: relative;
-        border-radius: var(--radius-sm);
+        width: 100%;
+        aspect-ratio: 4/3;
+        background: #000;
+        border-radius: var(--radius-lg);
         overflow: hidden;
-        border: 1px solid rgba(0,0,0,0.8);
-        background: black;
-        min-height: 250px;
+        border: 1px solid var(--border);
+        box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
     }
 
-    :root[data-theme="light"] .glass-frame {
-        border-color: rgba(15,23,42,0.6);
-    }
-
-    .glass-frame video,
-    #cameraCapturePreview {
+    .viewport-video, .viewport-img {
         width: 100%;
         height: 100%;
         object-fit: cover;
         display: block;
     }
 
-    #cameraCapturePreview {
+    .viewport-overlay {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        padding: 1rem;
+        background: rgba(0,0,0,0.3);
+        pointer-events: none;
+    }
+
+    /* Reticle animation */
+    .reticle {
+        width: 60%;
+        height: 60%;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: var(--radius-md);
+        position: relative;
+        box-shadow: 0 0 0 999px rgba(0, 0, 0, 0.5);
+    }
+    
+    .reticle::after, .reticle::before, 
+    .reticle-corner-bl, .reticle-corner-tr {
+        content: "";
+        position: absolute;
+        width: 20px;
+        height: 20px;
+        border-color: var(--primary);
+        border-style: solid;
+        transition: all 0.3s;
+    }
+    
+    .reticle::before { top: -2px; left: -2px; border-width: 3px 0 0 3px; border-radius: 4px 0 0 0; }
+    .reticle::after { bottom: -2px; right: -2px; border-width: 0 3px 3px 0; border-radius: 0 0 4px 0; }
+    
+    /* Extra corners using divs or pseudo elements if needed, sticking to two for simplicity */
+    
+    .scan-line {
         position: absolute;
         top: 0;
         left: 0;
-        z-index: 10;
-        display: none;
+        width: 100%;
+        height: 2px;
+        background: var(--primary);
+        box-shadow: 0 0 10px var(--primary);
+        animation: scan 2s linear infinite;
+        opacity: 0.6;
+    }
+    
+    @keyframes scan {
+        0% { top: 0%; opacity: 0; }
+        20% { opacity: 1; }
+        80% { opacity: 1; }
+        100% { top: 100%; opacity: 0; }
     }
 
-    .camera-status {
-        position: absolute;
-        left: 12px;
-        bottom: 12px;
-        background: rgba(0, 0, 0, 0.75);
-        border-radius: 999px;
-        padding: 5px 12px;
-        font-size: 11px;
+    /* Controls */
+    .control-row {
+        display: flex;
+        gap: 0.75rem;
+        margin-top: 1rem;
+    }
+
+    .btn-primary, .btn-secondary {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1.25rem;
+        border-radius: var(--radius-md);
+        font-size: 0.9rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 0.1s, box-shadow 0.2s, background 0.2s;
+        border: none;
+        flex: 1;
+    }
+
+    .btn-primary {
+        background: var(--primary);
         color: white;
+        flex: 2;
+        box-shadow: 0 4px 12px var(--primary-glow);
+    }
+    .btn-primary:hover:not(:disabled) { background: var(--primary-hover); transform: translateY(-1px); }
+    .btn-primary:active:not(:disabled) { transform: translateY(0); }
+    .btn-primary:disabled { 
+        background: var(--bg-element); 
+        color: var(--text-dim); 
+        border: 1px solid var(--border);
+        cursor: not-allowed; 
+        box-shadow: none; 
+        transform: none;
+    }
+
+    .btn-secondary {
+        background: var(--bg-element);
+        color: var(--text-main);
+        border: 1px solid var(--border);
+    }
+    .btn-secondary:hover { 
+        background: var(--bg-element-hover);
+        border-color: var(--text-muted); 
+    }
+
+    /* Upload Zone */
+    .upload-zone {
+        border: 2px dashed var(--border);
+        border-radius: var(--radius-lg);
+        height: 280px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        color: var(--text-muted);
+        transition: all 0.2s;
+        cursor: pointer;
+        background: var(--bg-element);
+        position: relative;
+        overflow: hidden;
+    }
+    .upload-zone:hover, .upload-zone.dragover {
+        border-color: var(--primary);
+        background: var(--primary-dim);
+        color: var(--primary);
+    }
+    .upload-zone svg { width: 48px; height: 48px; margin-bottom: 1rem; stroke-width: 1.5px; }
+
+    /* Manual Input */
+    .input-group {
+        display: flex;
+        gap: 0.5rem;
+    }
+    .text-input {
+        flex: 1;
+        background: var(--bg-element);
+        border: 1px solid var(--border);
+        color: var(--text-main);
+        padding: 0.75rem 1rem;
+        border-radius: var(--radius-md);
+        font-family: var(--font-sans);
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .text-input:focus { 
+        border-color: var(--primary); 
+        box-shadow: 0 0 0 3px var(--primary-dim);
+    }
+    .text-input::placeholder { color: var(--text-dim); }
+
+    /* -------------------------------------- */
+    /* RIGHT COLUMN: ENCYCLOPEDIA */
+    /* -------------------------------------- */
+    .ency-header {
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 1.25rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .chip-container {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 0.75rem;
+        flex-wrap: wrap;
+    }
+
+    .chip {
+        font-size: 0.7rem;
+        font-family: var(--font-mono);
+        text-transform: uppercase;
+        font-weight: 600;
+        padding: 4px 10px;
+        border-radius: 99px;
+        background: var(--primary-dim);
+        color: var(--primary);
+        border: 1px solid rgba(59, 130, 246, 0.2);
+    }
+
+    .part-name {
+        font-size: 2.25rem;
+        font-weight: 800;
+        line-height: 1.1;
+        color: var(--text-main);
+        margin-bottom: 0.5rem;
+        letter-spacing: -0.02em;
+    }
+
+    .part-category {
+        font-family: var(--font-mono);
+        color: var(--text-muted);
+        font-size: 0.9rem;
         display: flex;
         align-items: center;
-        gap: 8px;
-        z-index: 20;
+        gap: 0.5rem;
+    }
+    .part-category::before {
+        content: "#";
+        color: var(--primary);
     }
 
-    :root[data-theme="light"] .camera-status {
-        background: rgba(0, 0, 0, 0.7);
-        color: white;
+    /* Scroll Area */
+    .ency-content {
+        flex: 1;
+        overflow-y: auto;
+        padding-right: 0.5rem;
     }
 
-    .mini-loader {
-        width: 16px;
-        height: 16px;
-        border: 3px solid rgba(255, 255, 255, 0.3);
-        border-top-color: var(--accent);
+    .data-section {
+        margin-bottom: 2rem;
+    }
+
+    .section-label {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--text-dim);
+        margin-bottom: 0.85rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .section-label::after {
+        content: "";
+        flex: 1;
+        height: 1px;
+        background: var(--border);
+        opacity: 0.5;
+    }
+
+    .section-body {
+        font-size: 1rem;
+        line-height: 1.6;
+        color: var(--text-muted);
+    }
+    
+    .section-body p { margin-bottom: 0.75rem; }
+    .section-body ul { list-style: none; padding: 0; display: grid; gap: 0.5rem; }
+    .section-body li { 
+        position: relative; 
+        padding-left: 1.5rem; 
+        color: var(--text-main);
+        font-size: 0.95rem;
+    }
+    .section-body li::before {
+        content: "•";
+        position: absolute;
+        left: 0.25rem;
+        color: var(--primary);
+        font-weight: bold;
+    }
+
+    /* Images Grid */
+    .ref-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.75rem;
+        margin-top: 1rem;
+    }
+    
+    .ref-item {
+        background: var(--bg-element);
+        border-radius: var(--radius-md);
+        padding: 4px;
+        border: 1px solid var(--border);
+        overflow: hidden;
+        transition: transform 0.2s, border-color 0.2s;
+    }
+    .ref-item:hover {
+        border-color: var(--primary);
+        transform: translateY(-2px);
+    }
+    
+    .ref-image-box {
+        aspect-ratio: 1;
+        width: 100%;
+        background: #fff; /* White bg for components looks cleaner */
+        border-radius: var(--radius-sm);
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+    }
+    /* Dark mode toggle for image background if desired, keeping white for clarity of schematics */
+    :root[data-theme="dark"] .ref-image-box { background: #fff; } 
+    :root[data-theme="light"] .ref-image-box { background: #f1f5f9; }
+
+    .ref-item img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+        display: block;
+    }
+
+    .ref-caption {
+        font-size: 0.7rem;
+        text-align: center;
+        padding: 6px 0 2px;
+        color: var(--text-dim);
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    /* Links */
+    .link-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .chip-link {
+        font-size: 0.8rem;
+        text-decoration: none;
+        padding: 8px 14px;
+        background: var(--bg-element);
+        color: var(--text-main);
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border);
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-weight: 500;
+    }
+    .chip-link:hover {
+        border-color: var(--primary);
+        color: var(--primary);
+        background: var(--primary-dim);
+        transform: translateY(-1px);
+    }
+
+    /* Footer / Status */
+    .status-bar {
+        margin-top: auto;
+        padding-top: 1rem;
+        border-top: 1px solid var(--border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.75rem;
+        color: var(--text-dim);
+        font-family: var(--font-mono);
+    }
+
+    .loader {
+        width: 18px;
+        height: 18px;
+        border: 2px solid var(--border);
+        border-top-color: var(--primary);
         border-radius: 50%;
         animation: spin 0.8s linear infinite;
         display: none;
     }
+    
+    @keyframes spin { 100% { transform: rotate(360deg); } }
 
-    .input-controls {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        margin-top: 12px;
-    }
-
-    .primary-btn {
-        border-radius: 999px;
-        border: none;
-        padding: 9px 18px;
-        font-size: 14px;
-        font-weight: 600;
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        background: linear-gradient(120deg, var(--accent), var(--accent-dark));
-        color: white;
-        cursor: pointer;
-        box-shadow: 0 8px 18px rgba(92, 124, 250, 0.4);
-        transition: 0.15s;
-    }
-
-    .primary-btn:hover:not(:disabled) {
-        transform: translateY(-2px);
-        box-shadow: 0 14px 28px rgba(92, 124, 250, 0.6);
-    }
-
-    .primary-btn:disabled {
-        opacity: 0.55;
-        cursor: not-allowed;
-        box-shadow: none;
-        transform: none;
-    }
-
-    .hint {
-        margin-top: 10px;
-        font-size: 12px;
-        color: var(--muted);
-        line-height: 1.5;
-    }
-
-    .upload-dropzone {
-        border-radius: var(--radius-sm);
-        border: 2px dashed var(--border);
-        background: var(--panel);
-        padding: 30px;
-        min-height: 250px;
-        text-align: center;
-        cursor: pointer;
-        position: relative;
-        overflow: hidden;
-        transition: 0.15s;
-    }
-
-    .upload-dropzone:hover {
-        border-color: var(--accent);
-        background: var(--panel-soft);
-    }
-
-    .upload-dropzone.dragover {
-        border-color: var(--accent);
-        background: radial-gradient(circle at top, rgba(92, 124, 250, 0.15), var(--panel-soft));
-        box-shadow: 0 10px 20px rgba(92, 124, 250, 0.3);
-        transform: scale(1.0);
-    }
-
-    :root[data-theme="light"] .upload-dropzone {
-        background: #ffffff;
-    }
-
-    .upload-icon svg {
-        width: 48px;
-        height: 48px;
-        stroke: var(--accent);
-    }
-
-    .upload-text {
-        margin-top: 8px;
-        font-size: 14px;
-        color: var(--muted);
-    }
-
-    #uploadPreview {
+    /* Modal Styles */
+    .modal {
         display: none;
-        position: absolute;
+        position: fixed;
         inset: 0;
+        background: rgba(0,0,0,0.6);
+        backdrop-filter: blur(4px);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+    }
+    .modal.active { display: flex; }
+    .modal-content {
+        background: var(--bg-panel);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-xl);
+        max-width: 500px;
         width: 100%;
-        height: 100%;
-        object-fit: contain;
-        background: var(--panel);
+        padding: 1.5rem;
+        box-shadow: var(--shadow-card);
+        position: relative;
+        animation: slideUp 0.3s ease;
     }
-
-    .manual-input-row {
-        display: flex;
-        gap: 10px;
-        margin-top: 6px;
+    @keyframes slideUp {
+        from { transform: translateY(20px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
     }
-
-    .manual-input-row input {
-        flex: 1;
-        border-radius: 999px;
-        border: 1px solid var(--border);
-        background: var(--panel);
-        color: var(--text);
-        padding: 9px 16px;
-        font-size: 14px;
-        transition: border-color 0.2s;
-    }
-
-    .manual-input-row input:focus {
-        border-color: var(--accent);
-        outline: none;
-    }
-
-    :root[data-theme="light"] .manual-input-row input {
-        background: #ffffff;
-    }
-
-    .manual-input-row input::placeholder {
-        color: rgba(148, 163, 184, 0.85);
-    }
-
-    /* -------------------------------------- */
-    /* RIGHT PANEL (ENCYCLOPEDIA) */
-    /* -------------------------------------- */
-    .ency-body {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-        flex: 1;
-        min-height: 0;
-        overflow: hidden;
-    }
-
-    .ency-header {
-        margin-bottom: 6px;
-    }
-
-    .ency-title {
-        font-size: 12px;
-        text-transform: uppercase;
-        letter-spacing: 0.1em;
-        font-weight: 600;
-        color: var(--muted);
-    }
-
-    .ency-badges {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-        margin-top: 6px;
-    }
-
-    .ency-chip {
-        padding: 4px 10px;
-        border-radius: 999px;
-        border: 1px solid var(--border);
-        background: var(--panel);
-        color: var(--accent);
-        font-size: 11px;
-        font-weight: 500;
-    }
-
-    :root[data-theme="light"] .ency-chip {
-        background: #EEF2FF;
-        color: var(--accent-dark);
-    }
-
-    .name-row {
+    .modal-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        gap: 8px;
-        margin-top: 8px;
-        padding-bottom: 6px;
+        margin-bottom: 1rem;
         border-bottom: 1px solid var(--border);
+        padding-bottom: 0.5rem;
     }
-
-    .device-name {
-        font-size: 20px;
-        font-weight: 700;
-    }
-
-    .device-category {
-        font-size: 12px;
-        padding: 4px 10px;
-        border-radius: 999px;
-        border: 1px solid var(--border);
-        background: var(--panel);
-        color: var(--text);
-        font-weight: 500;
-    }
-
-    :root[data-theme="light"] .device-category {
-        background: #EEF2FF;
-        color: var(--accent-dark);
-    }
-
-    .ency-scroll {
-        margin-top: 8px;
-        padding-right: 6px;
-        overflow-y: auto;
-        flex: 1;
-        max-height: calc(100% - 120px);
-        scrollbar-color: var(--accent) var(--panel-soft);
-    }
-
-    .ency-scroll::-webkit-scrollbar {
-        width: 8px;
-    }
-    .ency-scroll::-webkit-scrollbar-thumb {
-        background-color: var(--accent);
-        border-radius: 4px;
-        border: 2px solid var(--panel-soft);
-    }
-    .ency-scroll::-webkit-scrollbar-track {
-        background: var(--panel-soft);
-    }
-
-    .section {
-        margin-top: 18px;
-        font-size: 14px;
-        line-height: 1.6;
-    }
-
-    .section-title {
-        font-size: 12px;
-        text-transform: uppercase;
-        letter-spacing: 0.1em;
+    .modal-header h3 {
+        color: var(--text-main);
+        font-size: 1.1rem;
         font-weight: 600;
-        color: var(--accent);
-        margin-bottom: 6px;
-        border-bottom: 1px dashed var(--border);
-        padding-bottom: 4px;
     }
-
-    .section-content ul {
-        padding-left: 20px;
-        list-style-type: '— ';
-        list-style-position: outside;
+    .close-modal {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        color: var(--text-muted);
+        cursor: pointer;
+        padding: 0 0.5rem;
     }
+    .close-modal:hover { color: var(--text-main); }
+    .modal-body h4 { margin: 1rem 0 0.5rem; color: var(--text-main); font-size: 0.95rem; font-weight: 600; }
+    .modal-body p { font-size: 0.9rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 0.5rem; }
+    .modal-body ul { padding-left: 1.2rem; margin-bottom: 1rem; color: var(--text-muted); font-size: 0.9rem; line-height: 1.5; }
+    .modal-body li { margin-bottom: 0.4rem; }
+    .modal-body strong { color: var(--text-main); }
 
-    .section-content li {
-        margin-bottom: 6px;
-        padding-left: 6px;
-    }
-
-    .placeholder {
-        font-style: italic;
-        color: var(--muted);
-    }
-
-    .ref-link {
-        color: var(--accent);
-        text-decoration: none;
-        font-weight: 500;
-        transition: color 0.2s;
-    }
-
-    .ref-link:hover { text-decoration: underline; color: var(--accent-dark); }
-
-    .ref-snippet {
-        font-size: 11px;
-        color: var(--muted);
-        line-height: 1.4;
-        margin-top: 2px;
-    }
-
-    .shop-links {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        margin-top: 6px;
-    }
-
-    .shop-btn {
-        font-size: 13px;
-        padding: 6px 12px;
-        border-radius: var(--radius-sm);
-        border: 1px solid var(--border);
-        background: var(--panel);
-        color: var(--text);
-        text-decoration: none;
-        transition: all 0.2s;
-    }
-
-    .shop-btn:hover {
-        border-color: var(--accent);
-        background: var(--accent);
-        color: white;
-    }
-
-    :root[data-theme="light"] .shop-btn {
-        background: #F3F4F6;
-        color: var(--text);
-    }
-
-    .ref-image-grid {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 12px;
-    }
-
-    @media (max-width: 900px) {
-        .ref-image-grid { grid-template-columns: 1fr; }
-    }
-
-    .ref-block {
-        border-radius: var(--radius-sm);
-        border: 1px solid var(--border);
-        background: var(--panel);
-        padding: 8px;
-        font-size: 11px;
-        color: var(--muted);
-    }
-
-    :root[data-theme="light"] .ref-block {
-        background: var(--panel-soft);
-    }
-
-    .ref-img-label {
-        margin-bottom: 6px;
-        font-size: 12px;
-        font-weight: 600;
-        color: var(--text);
-    }
-
-    .ref-block img {
-        width: 100%;
-        border-radius: 4px;
-        object-fit: cover;
-        display: none;
-    }
-
-    .status-bar {
-        margin-top: auto;
-        padding-top: 10px;
-        border-top: 1px solid var(--border);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        font-size: 12px;
-        color: var(--muted);
-    }
-
-    .loader {
-        width: 16px;
-        height: 16px;
-        border-width: 3px;
-        border-radius: 50%;
-        border: 3px solid rgba(148, 163, 184, 0.3);
-        border-top-color: var(--accent);
-        animation: spin 0.7s linear infinite;
-        display: none;
-    }
-
-    @keyframes spin {
-        to { transform: rotate(360deg); }
-    }
-
-    /* -------------------------------------- */
-    /* INFO STRIP + FOOTER */
-    /* -------------------------------------- */
-    .info-strip {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 16px;
-    }
-
-    @media (max-width: 900px) {
-        .info-strip { grid-template-columns: 1fr; }
-    }
-
-    .info-card {
-        border-radius: var(--radius-md);
-        border: 1px solid var(--border);
-        background: var(--panel);
-        padding: 14px 16px;
-        font-size: 13px;
-        color: var(--muted);
-        box-shadow: var(--shadow-soft);
-    }
-
-    :root[data-theme="light"] .info-card {
-        background: #ffffff;
-    }
-
-    .info-card h3 {
-        font-size: 15px;
-        font-weight: 700;
-        margin-bottom: 4px;
-        color: var(--text);
-        border-bottom: 1px solid var(--border);
-        padding-bottom: 4px;
-    }
-
-    footer {
+    .site-footer {
+        font-size: 0.75rem;
+        color: var(--text-dim);
         text-align: center;
-        font-size: 12px;
-        color: var(--muted);
-        margin-top: 10px;
-        padding-top: 10px;
-        border-top: 1px solid var(--border);
-        opacity: 0.85;
+        margin-top: auto;
+        padding-top: 1rem;
     }
 
-    @media (max-width: 600px) {
-        .site-header { flex-direction: column; align-items: flex-start; }
-        .header-right { margin-top: 10px; gap: 10px; }
-        .nav-links { display: none; }
-        .top-strip { flex-direction: column; align-items: flex-start; text-align: left; }
-        .top-strip-right { text-align: left; max-width: 100%; margin-top: 10px; }
-        body { padding: 15px; }
-        .shell { gap: 16px; }
+    /* Mobile adjustments */
+    @media (max-width: 768px) {
+        body { padding: 1rem; }
+        .dashboard-grid { min-height: auto; gap: 1rem; }
+        .card { padding: 1.25rem; border-radius: var(--radius-lg); }
+        .part-name { font-size: 1.75rem; }
+        .mode-switcher { overflow-x: auto; }
+        .ref-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    
+    @media (max-width: 480px) {
+        .ref-grid { grid-template-columns: 1fr; } 
+        .ref-image-box { aspect-ratio: 16/9; }
     }
   </style>
 </head>
 <body>
-  <div class="shell">
-    <!-- HEADER -->
-    <header class="site-header">
-      <div class="brand">
-        <div class="logo-placeholder">⚡</div>
-        <div>
-          <div class="brand-title">
-            <span class="brand-highlight">ElectroLens</span> – AI Electronics Encyclopedia
-          </div>
-          <div class="brand-subtitle">
-            Identify components, see specs, and explore projects using Gemini, and web search.
-          </div>
-        </div>
-      </div>
-      <div class="header-right">
-        <nav class="nav-links">
-          <span>Dashboard</span>
-          <span>How it works</span>
-          <span>About</span>
-        </nav>
-        <button id="themeToggle" class="theme-toggle-icon" title="Toggle dark/light mode">🌙</button>
-      </div>
-    </header>
 
-    <!-- SMALL HERO STRIP -->
-    <section class="top-strip">
-      <div class="top-strip-left">
-        <div class="badge">
-          <span class="badge-dot"></span>
-          Live lab assistant · Vision + LLM + Web
-        </div>
-        <div class="top-title">
-          Scan electronics parts and <span>instantly get an engineer-style explanation.</span>
-        </div>
-        <div class="top-text">
-          Use the left panel to capture or upload a component. ElectroLens fills the encyclopedia on the right.
-        </div>
+<div class="shell">
+  <!-- HEADER -->
+  <header class="site-header">
+    <div class="brand">
+      <div class="logo-box">⚡</div>
+      <div class="brand-info">
+        <h1>ElectroLens</h1>
+        <p>AI Component Analyzer</p>
       </div>
-      <div class="top-strip-right">
-        Tip: Start with an <b>ESP32 dev board</b>, <b>LM7805</b>, or <b>relay module</b> for a great demo.
+    </div>
+    <div class="header-actions">
+      <a id="historyLink" class="nav-link">History</a>
+      <a id="aboutLink" class="nav-link">About</a>
+      <button class="theme-toggle" id="themeToggle" title="Toggle Theme">
+        <!-- Sun Icon -->
+        <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+        <!-- Moon Icon -->
+        <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="dashboard-grid">
+    
+    <!-- LEFT PANEL: INPUT -->
+    <section class="card">
+      <div class="card-header">
+        <div class="card-title">Input Source</div>
+        <div class="loader" id="cameraLoader"></div>
       </div>
-    </section>
 
-    <!-- DASHBOARD -->
-    <section class="dashboard">
-      <!-- LEFT: INPUT PANEL -->
-      <section class="card">
-        <div class="card-header">
-          <div class="card-label">Input</div>
-          <div class="card-tag">ElectroLens Scanner</div>
-        </div>
+      <div class="mode-switcher">
+        <button class="mode-btn active" data-mode="camera">Camera</button>
+        <button class="mode-btn" data-mode="upload">Upload</button>
+        <button class="mode-btn" data-mode="manual">Manual</button>
+      </div>
 
-        <div class="mode-tabs">
-          <button class="mode-tab active" data-mode="camera">📷 Camera</button>
-          <button class="mode-tab" data-mode="upload">🖼 Upload</button>
-          <button class="mode-tab" data-mode="manual">🔍 Type Name</button>
-        </div>
-
-        <!-- CAMERA MODE -->
-        <div class="mode-panel" id="mode-camera">
-          <div class="camera-shell">
-            <div class="glass-frame">
-              <video id="camera" autoplay playsinline></video>
-              <img id="cameraCapturePreview" alt="Captured frame" />
-              <div class="camera-status">
-                <div class="mini-loader" id="cameraLoader"></div>
-                <span id="cameraStatusText">Waiting for permission…</span>
-              </div>
+      <!-- Mode: Camera -->
+      <div id="mode-camera" class="mode-content">
+        <div class="viewport-container">
+          <video id="camera" class="viewport-video" autoplay playsinline muted></video>
+          <img id="cameraCapturePreview" class="viewport-img" style="display:none;" />
+          
+          <div class="viewport-overlay" id="camOverlay">
+            <div class="reticle">
+                <div class="scan-line"></div>
             </div>
+            <p style="margin-top:1rem; font-size:0.75rem; color:rgba(255,255,255,0.7); font-weight:500;">Center component in frame</p>
           </div>
-          <div class="input-controls">
-            <button class="primary-btn" id="analyzeCameraBtn" disabled>🔍 Analyze frame</button>
-            <button class="primary-btn" id="toggleCameraBtn">▶ Start camera</button>
-          </div>
-          <p class="hint">
-            Place a single component or board in the center with good lighting for best results.
-          </p>
         </div>
+        <div style="margin-top:1rem; display: flex; justify-content: space-between; align-items: center;">
+            <span id="cameraStatusText" style="font-size:0.75rem; color:var(--text-dim); font-family:var(--font-mono);">STATUS: IDLE</span>
+        </div>
+        <div class="control-row">
+            <button class="btn-secondary" id="toggleCameraBtn">Stop</button>
+            <button class="btn-primary" id="analyzeCameraBtn">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="4"></circle><line x1="21.17" y1="8" x2="12" y2="8"></line></svg>
+                Scan Component
+            </button>
+        </div>
+      </div>
 
-        <!-- UPLOAD MODE -->
-        <div class="mode-panel" id="mode-upload" style="display:none;">
-          <div class="upload-dropzone" id="uploadDropzone">
+      <!-- Mode: Upload -->
+      <div id="mode-upload" class="mode-content" style="display:none;">
+        <div class="upload-zone" id="uploadDropzone">
             <div id="uploadPrompt">
-              <div class="upload-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke="currentColor"></path>
-                  <path d="M12 3v14" stroke="currentColor"></path>
-                  <path d="M7 8l5-5 5 5" stroke="currentColor"></path>
-                </svg>
-              </div>
-              <div class="upload-text">Drag & drop or click to upload an image</div>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <p style="font-weight:600; margin-bottom:0.25rem;">Click or Drop Image</p>
+                <span style="font-size:0.8rem; opacity:0.6">Supports JPG, PNG, WEBP</span>
             </div>
-            <img id="uploadPreview" alt="Upload preview" />
+            <img id="uploadPreview" class="viewport-img" style="display:none; height: 100%; object-fit:contain;" />
             <input type="file" id="fileInput" accept="image/*" hidden />
-          </div>
-          <div class="input-controls">
-            <button class="primary-btn" id="analyzeUploadBtn" disabled>🔍 Analyze image</button>
-          </div>
-          <p class="hint">
-            Works great for clear photos of dev boards, modules, tools, or test equipment.
-          </p>
         </div>
-
-        <!-- MANUAL MODE -->
-        <div class="mode-panel" id="mode-manual" style="display:none;">
-          <p class="hint" style="margin-bottom:4px;">
-            Type a part number or component name (e.g. <i>ESP32 DevKitC, LM7805, 2N2222, 10kΩ resistor 1/4W</i>).
-          </p>
-          <div class="manual-input-row">
-            <input id="manualInput" type="text" placeholder="e.g. ESP32 DevKitC, LM7805, HC-SR04 module">
-            <button class="primary-btn" id="manualSearchBtn">Go</button>
-          </div>
+        <div class="control-row" style="margin-top: 1rem;">
+            <button class="btn-primary" id="analyzeUploadBtn" disabled>Analyze Image</button>
         </div>
+      </div>
 
-        <canvas id="captureCanvas" style="display:none;"></canvas>
-      </section>
-
-      <!-- RIGHT: ENCYCLOPEDIA PANEL -->
-      <section class="card">
-        <div class="ency-body">
-          <div>
-            <div class="ency-header">
-              <div class="ency-title">ElectroLens Encyclopedia</div>
-              <div class="ency-badges">
-                <span class="ency-chip">Gemini Vision</span>
-                <span class="ency-chip">Google / Serper</span>
-                <span class="ency-chip" id="modelChip">Mode: Auto</span>
-              </div>
+      <!-- Mode: Manual -->
+      <div id="mode-manual" class="mode-content" style="display:none;">
+        <div style="height: 280px; display: flex; flex-direction: column; justify-content: center;">
+            <label style="font-size:0.8rem; color:var(--text-muted); margin-bottom:0.5rem; font-weight:600;">ENTER PART NUMBER OR NAME</label>
+            <div class="input-group">
+                <input type="text" id="manualInput" class="text-input" placeholder="e.g. ESP32, LM7805, 10k Resistor..." />
+                <button class="btn-primary" id="manualSearchBtn" style="flex:0; padding:0 1.5rem;">Go</button>
             </div>
-            <div class="name-row">
-              <div class="device-name" id="deviceName">No device analyzed yet</div>
-              <div class="device-category" id="deviceCategory">—</div>
-            </div>
-          </div>
-
-          <div class="ency-scroll">
-            <div class="section">
-              <div class="section-title">Overview</div>
-              <div class="section-content" id="description">
-                <p class="placeholder">
-                  Scan or search a component to see a detailed explanation and how it fits into real circuits.
+            <div style="margin-top:1.5rem; padding:1rem; background:var(--bg-element); border-radius:var(--radius-md); border:1px solid var(--border);">
+                <p style="font-size:0.8rem; color:var(--text-dim); line-height:1.5;">
+                    <strong style="color:var(--text-main);">Tip:</strong> Be specific for best results. Instead of just "capacitor", try "100uF 16V electrolytic capacitor".
                 </p>
-              </div>
             </div>
+        </div>
+      </div>
 
-            <div class="section">
-              <div class="section-title">Typical Uses</div>
-              <div class="section-content" id="typicalUses">
-                <p class="placeholder">Common applications will appear here.</p>
-              </div>
+      <!-- Hidden Canvas for capture -->
+      <canvas id="captureCanvas" style="display:none;"></canvas>
+
+    </section>
+
+
+    <!-- RIGHT PANEL: OUTPUT -->
+    <section class="card">
+      <div class="card-header">
+        <div class="card-title">Analysis Protocol</div>
+        <div class="loader" id="globalLoader"></div>
+      </div>
+
+      <div class="ency-content">
+        <!-- Header Info -->
+        <div class="ency-header">
+            <div class="chip-container">
+                <span class="chip">AI Vision v2</span>
+                <span class="chip">Datasheet Search</span>
             </div>
+            <h2 class="part-name" id="deviceName">Ready to Scan</h2>
+            <div class="part-category" id="deviceCategory">Waiting for input...</div>
+        </div>
 
-            <div class="section">
-              <div class="section-title">Where to Buy</div>
-              <div class="section-content" id="whereToBuy">
-                <p class="placeholder">Shops, distributors, and marketplaces will be listed here.</p>
-              </div>
-            </div>
-
-            <div class="section">
-              <div class="section-title">Key Specs</div>
-              <div class="section-content" id="keySpecs">
-                <p class="placeholder">Voltage, current, power, and other important parameters will appear here.</p>
-              </div>
-            </div>
-
-            <div class="section">
-              <div class="section-title">Project Ideas</div>
-              <div class="section-content" id="projectIdeas">
-                <p class="placeholder">Example projects and integrations will appear here.</p>
-              </div>
-            </div>
-
-            <div class="section">
-              <div class="section-title">Common Mistakes & Warnings</div>
-              <div class="section-content" id="commonMistakes">
-                <p class="placeholder">Typical pitfalls, overheating, polarity or wiring mistakes will appear here.</p>
-              </div>
-            </div>
-
-            <div class="section">
-              <div class="section-title">Datasheet Hint</div>
-              <div class="section-content" id="datasheetHint">
-                <p class="placeholder">ElectroLens will suggest what to search to quickly find the official datasheet.</p>
-              </div>
-            </div>
-
-            <div class="section">
-              <div class="section-title">Datasheet & References</div>
-              <div class="section-content" id="referencesSection">
-                <p class="placeholder">Direct datasheet links and reference pages will appear here when available.</p>
-              </div>
-            </div>
-
-            <div class="section">
-              <div class="section-title">Buy Online</div>
-              <div class="section-content">
-                <div class="shop-links" id="shopLinks"></div>
-              </div>
-            </div>
-
-            <div class="section">
-              <div class="section-title">Reference Images</div>
-              <div class="section-content">
-                <div class="ref-image-grid">
-                  <div class="ref-block">
-                    <div class="ref-img-label">Component photo</div>
-                    <img id="refImage" alt="Component photo from search" />
-                  </div>
-                  <div class="ref-block">
-                    <div class="ref-img-label">Example usage / application</div>
-                    <img id="usageImage" alt="Example usage or application" />
-                  </div>
-                  <div class="ref-block">
-                    <div class="ref-img-label">Pinout diagram</div>
-                    <img id="pinoutImage" alt="Pinout diagram from search" />
-                  </div>
+        <!-- Dynamic Sections -->
+        <div id="resultsContainer">
+            
+            <div class="data-section">
+                <div class="section-label">Overview</div>
+                <div class="section-body" id="description">
+                    <p>Position an electronic component in the camera view or upload a clear image to begin identification and datasheet retrieval.</p>
                 </div>
-                <p class="hint" style="margin-top:6px;">
-                  Images are suggested via AI + web context. Always confirm pinouts and specs using the official datasheet.
-                </p>
-              </div>
             </div>
-          </div>
 
-          <div class="status-bar">
-            <span id="aiStatusText">Ready – choose a mode and analyze.</span>
-            <div class="loader" id="globalLoader"></div>
-          </div>
+            <div class="data-section">
+                <div class="section-label">Key Specifications</div>
+                <div class="section-body" id="keySpecs">
+                    <p class="text-muted">–</p>
+                </div>
+            </div>
+
+            <div class="data-section">
+                <div class="section-label">Typical Uses</div>
+                <div class="section-body" id="typicalUses">
+                    <p class="text-muted">–</p>
+                </div>
+            </div>
+
+            <div class="data-section">
+                <div class="section-label">Common Mistakes</div>
+                <div class="section-body" id="commonMistakes">
+                    <p class="text-muted">–</p>
+                </div>
+            </div>
+
+            <div class="data-section">
+                <div class="section-label">Visual Verification</div>
+                <div class="ref-grid">
+                    <div class="ref-item">
+                        <div class="ref-image-box">
+                            <img id="refImage" alt="" style="display:none">
+                        </div>
+                        <div class="ref-caption">Reference</div>
+                    </div>
+                    <div class="ref-item">
+                        <div class="ref-image-box">
+                            <img id="pinoutImage" alt="" style="display:none">
+                        </div>
+                        <div class="ref-caption">Pinout</div>
+                    </div>
+                    <div class="ref-item">
+                        <div class="ref-image-box">
+                            <img id="usageImage" alt="" style="display:none">
+                        </div>
+                        <div class="ref-caption">Circuit</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="data-section">
+                <div class="section-label">External Resources</div>
+                <div class="section-body" id="datasheetHint"></div>
+                <div class="link-group" id="referencesSection" style="margin-top:0.75rem;"></div>
+                <div class="section-label" style="margin-top:1.5rem;">Purchase Links</div>
+                <div class="link-group" id="shopLinks" style="width:100%;"></div>
+            </div>
+
         </div>
-      </section>
+      </div>
+
+      <div class="status-bar">
+        <span id="aiStatusText">System Idle</span>
+        <span>ElectroLens v2.0</span>
+      </div>
     </section>
 
-    <!-- INFO STRIP -->
-    <section class="info-strip">
-      <article class="info-card">
-        <h3>1 · Vision & Identification</h3>
-        <p>Gemini looks at the image or text and identifies the most likely electronics component, module, or tool.</p>
-      </article>
-      <article class="info-card">
-        <h3>3 · Real-World Links</h3>
-        <p>Google Custom Search and Serper find real images, datasheets, and shop links (Shopee, Lazada, Amazon, AliExpress).</p>
-      </article>
-    </section>
-
-    <!-- FOOTER -->
-    <footer>
-      © 2025 ElectroLens. All Rights Reserved.
-    </footer>
   </div>
+  
+  <footer class="site-footer">
+    &copy; 2025 ElectroLens. AI responses may vary.
+  </footer>
+</div>
+
+<!-- ABOUT MODAL -->
+<div id="aboutModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>About ElectroLens</h3>
+      <button class="close-modal">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p><strong>ElectroLens</strong> is an intelligent encyclopedia for electronics enthusiasts, engineers, and makers, designed to identify components instantly.</p>
+      
+      <h4>How it works</h4>
+      <ul>
+        <li><strong>Vision Analysis:</strong> We use Google's <strong>Gemini Vision</strong> model to identify components from your camera or uploaded images.</li>
+        <li><strong>Data Enrichment:</strong> Once identified, the system intelligently searches for datasheets, pinout diagrams, and shopping links.</li>
+        <li><strong>Privacy:</strong> Images are processed for analysis and not permanently stored.</li>
+      </ul>
+      
+      <h4>Tech Stack</h4>
+      <ul>
+        <li>Frontend: HTML5, CSS3, Vanilla JS</li>
+        <li>AI Model: Gemini 1.5 Flash (Google DeepMind)</li>
+        <li>Search: Google Custom Search API & Serper</li>
+      </ul>
+
+      <p style="font-size:0.8rem; margin-top:1.5rem; color:var(--text-dim); border-top:1px solid var(--border); padding-top:1rem;">
+        <strong>Disclaimer:</strong> AI outputs can be inaccurate. Always verify pinouts, voltage ratings, and safety instructions with official manufacturer datasheets before powering up circuits.
+      </p>
+    </div>
+  </div>
+</div>
 
 <script>
-  // Theme toggle
-  const themeToggleBtn = document.getElementById("themeToggle");
+  // Theme logic
   const root = document.documentElement;
-
-  function applyTheme(theme) {
-    root.setAttribute("data-theme", theme);
-    localStorage.setItem("electrolens-theme", theme);
-    themeToggleBtn.textContent = theme === "dark" ? "🌙" : "☀";
+  const toggleBtn = document.getElementById('themeToggle');
+  const sunIcon = document.querySelector('.sun-icon');
+  const moonIcon = document.querySelector('.moon-icon');
+  
+  function setTheme(theme) {
+    root.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+    if (theme === 'dark') {
+        sunIcon.style.display = 'none';
+        moonIcon.style.display = 'block';
+    } else {
+        sunIcon.style.display = 'block';
+        moonIcon.style.display = 'none';
+    }
   }
-
-  (function initTheme() {
-    const saved = localStorage.getItem("electrolens-theme");
-    const initial = saved === "light" ? "light" : "dark";
-    applyTheme(initial);
-  })();
-
-  themeToggleBtn.addEventListener("click", () => {
-    const current = root.getAttribute("data-theme") || "dark";
-    const next = current === "dark" ? "light" : "dark";
-    applyTheme(next);
+  
+  toggleBtn.addEventListener('click', () => {
+    const current = root.getAttribute('data-theme') || 'dark';
+    setTheme(current === 'dark' ? 'light' : 'dark');
   });
 
-  // DOM references for scanner
-  const modeTabs = document.querySelectorAll(".mode-tab");
-  const modePanels = {
-    camera: document.getElementById("mode-camera"),
-    upload: document.getElementById("mode-upload"),
-    manual: document.getElementById("mode-manual"),
-  };
+  // Init theme
+  const savedTheme = localStorage.getItem('theme') || 'dark';
+  setTheme(savedTheme);
 
+  // Modal Logic
+  const aboutLink = document.getElementById('aboutLink');
+  const aboutModal = document.getElementById('aboutModal');
+  const closeModal = document.querySelector('.close-modal');
+
+  if(aboutLink && aboutModal) {
+      aboutLink.addEventListener('click', (e) => {
+          e.preventDefault();
+          aboutModal.classList.add('active');
+      });
+  }
+  
+  const hideModal = () => aboutModal.classList.remove('active');
+  
+  if(closeModal) closeModal.addEventListener('click', hideModal);
+  
+  aboutModal.addEventListener('click', (e) => {
+      if(e.target === aboutModal) hideModal();
+  });
+
+  // Tab Switching
+  const modeBtns = document.querySelectorAll('.mode-btn');
+  const modeContents = document.querySelectorAll('.mode-content');
+  
+  modeBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+        modeBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        
+        const mode = btn.dataset.mode;
+        modeContents.forEach(c => c.style.display = c.id === `mode-${mode}` ? 'block' : 'none');
+        
+        if(mode !== 'camera') stopCamera();
+    });
+  });
+
+  // DOM Elements
   const video = document.getElementById("camera");
   const cameraPreview = document.getElementById("cameraCapturePreview");
+  const camOverlay = document.getElementById("camOverlay");
   const analyzeCameraBtn = document.getElementById("analyzeCameraBtn");
   const toggleCameraBtn = document.getElementById("toggleCameraBtn");
   const cameraStatusText = document.getElementById("cameraStatusText");
-  const cameraLoader = document.getElementById("cameraLoader");
-
+  const canvas = document.getElementById("captureCanvas");
+  
   const uploadDropzone = document.getElementById("uploadDropzone");
-  const uploadPrompt = document.getElementById("uploadPrompt");
-  const uploadPreview = document.getElementById("uploadPreview");
   const fileInput = document.getElementById("fileInput");
+  const uploadPreview = document.getElementById("uploadPreview");
+  const uploadPrompt = document.getElementById("uploadPrompt");
   const analyzeUploadBtn = document.getElementById("analyzeUploadBtn");
 
   const manualInput = document.getElementById("manualInput");
   const manualSearchBtn = document.getElementById("manualSearchBtn");
 
-  const canvas = document.getElementById("captureCanvas");
-
-  const deviceNameEl = document.getElementById("deviceName");
-  const deviceCategoryEl = document.getElementById("deviceCategory");
-  const descriptionEl = document.getElementById("description");
-  const typicalUsesEl = document.getElementById("typicalUses");
-  const whereToBuyEl = document.getElementById("whereToBuy");
-  const keySpecsEl = document.getElementById("keySpecs");
-  const projectIdeasEl = document.getElementById("projectIdeas");
-  const commonMistakesEl = document.getElementById("commonMistakes");
-  const datasheetHintEl = document.getElementById("datasheetHint");
-  const referencesEl = document.getElementById("referencesSection");
-  const shopLinksEl = document.getElementById("shopLinks");
-  const refImageEl = document.getElementById("refImage");
-  const usageImageEl = document.getElementById("usageImage");
-  const pinoutImageEl = document.getElementById("pinoutImage");
-  const aiStatusText = document.getElementById("aiStatusText");
-  const globalLoader = document.getElementById("globalLoader");
-  const modelChip = document.getElementById("modelChip");
-
-  let cameraStream = null;
-  let analyzing = false;
-
-  const MODEL_LABELS = {
-    gemini: "Gemini",
+  // Output Elements
+  const els = {
+    name: document.getElementById("deviceName"),
+    category: document.getElementById("deviceCategory"),
+    desc: document.getElementById("description"),
+    specs: document.getElementById("keySpecs"),
+    uses: document.getElementById("typicalUses"),
+    mistakes: document.getElementById("commonMistakes"),
+    refImg: document.getElementById("refImage"),
+    pinImg: document.getElementById("pinoutImage"),
+    useImg: document.getElementById("usageImage"),
+    refs: document.getElementById("referencesSection"),
+    shops: document.getElementById("shopLinks"),
+    hint: document.getElementById("datasheetHint"),
+    status: document.getElementById("aiStatusText"),
+    loader: document.getElementById("globalLoader")
   };
 
-  // Mode switching
-  modeTabs.forEach(tab => {
-    tab.addEventListener("click", () => {
-      const mode = tab.dataset.mode;
-      modeTabs.forEach(t => t.classList.remove("active"));
-      tab.classList.add("active");
+  let cameraStream = null;
+  let isAnalyzing = false;
 
-      Object.keys(modePanels).forEach(key => {
-        modePanels[key].style.display = key === mode ? "block" : "none";
-      });
-
-      if (mode !== "camera") stopCamera();
-    });
-  });
-
-  // Camera
+  // Camera Logic
   async function startCamera() {
     try {
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        cameraStatusText.textContent = "Camera not supported.";
-        return;
-      }
-      cameraStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" }
-      });
-      video.srcObject = cameraStream;
-      analyzeCameraBtn.disabled = false;
-      cameraStatusText.textContent = "Camera active";
-      toggleCameraBtn.textContent = "⏹ Stop camera";
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            cameraStatusText.textContent = "Camera API unavailable";
+            return;
+        }
+        cameraStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: "environment" }
+        });
+        video.srcObject = cameraStream;
+        video.style.display = "block";
+        cameraPreview.style.display = "none";
+        camOverlay.style.display = "flex";
+        
+        analyzeCameraBtn.disabled = false;
+        toggleCameraBtn.textContent = "Stop";
+        cameraStatusText.textContent = "STATUS: ACTIVE";
     } catch (err) {
-      console.error(err);
-      cameraStatusText.textContent = "Permission denied or no camera.";
+        console.error(err);
+        cameraStatusText.textContent = "Access denied or unavailable";
     }
   }
 
   function stopCamera() {
     if (cameraStream) {
-      cameraStream.getTracks().forEach(t => t.stop());
-      cameraStream = null;
+        cameraStream.getTracks().forEach(t => t.stop());
+        cameraStream = null;
     }
-    video.srcObject = null;
-    analyzeCameraBtn.disabled = true;
-    cameraPreview.style.display = "none";
-    cameraStatusText.textContent = "Camera stopped";
-    toggleCameraBtn.textContent = "▶ Start camera";
+    video.style.display = "none";
+    toggleCameraBtn.textContent = "Start";
+    cameraStatusText.textContent = "STATUS: STOPPED";
   }
 
-  toggleCameraBtn.addEventListener("click", () => {
-    if (cameraStream) stopCamera();
+  toggleCameraBtn.addEventListener('click', () => {
+    if(cameraStream) stopCamera();
     else startCamera();
   });
 
-  analyzeCameraBtn.addEventListener("click", async () => {
-    if (!cameraStream || analyzing) return;
-    const w = video.videoWidth || 640;
-    const h = video.videoHeight || 480;
+  // Capture & Analyze
+  analyzeCameraBtn.addEventListener('click', async () => {
+    if (!cameraStream || isAnalyzing) return;
+    
+    // Capture
+    const w = video.videoWidth;
+    const h = video.videoHeight;
     canvas.width = w;
     canvas.height = h;
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext('2d');
     ctx.drawImage(video, 0, 0, w, h);
-    const dataURL = canvas.toDataURL("image/jpeg", 0.85);
-
+    
+    const dataURL = canvas.toDataURL('image/jpeg', 0.85);
+    
+    // UI Update
+    video.style.display = "none";
+    camOverlay.style.display = "none";
     cameraPreview.src = dataURL;
     cameraPreview.style.display = "block";
-    cameraStatusText.textContent = "Frame captured – analyzing…";
-    video.pause();
-    cameraLoader.style.display = "block";
-
-    await analyzeWithBackend({ image: dataURL, queryText: "" });
-
-    if (cameraStream) {
-      cameraPreview.style.display = "none";
-      cameraStatusText.textContent = "Camera active";
-      video.play();
-    }
-    cameraLoader.style.display = "none";
+    stopCamera(); 
+    
+    await runAnalysis({ image: dataURL });
   });
 
-  // Upload
-  uploadDropzone.addEventListener("click", () => fileInput.click());
+  // Upload Logic
+  uploadDropzone.addEventListener('click', () => fileInput.click());
+  
+  fileInput.addEventListener('change', (e) => {
+    const file = e.target.files?.[0];
+    if(file) handleFile(file);
+  });
+  
+  // Drag and drop handlers
+  uploadDropzone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadDropzone.classList.add('dragover');
+  });
+  uploadDropzone.addEventListener('dragleave', () => {
+      uploadDropzone.classList.remove('dragover');
+  });
+  uploadDropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadDropzone.classList.remove('dragover');
+      const file = e.dataTransfer.files?.[0];
+      if(file) handleFile(file);
+  });
 
-  fileInput.addEventListener("change", e => {
-    const file = e.target.files && e.target.files[0];
-    if (!file) return;
+  function handleFile(file) {
+    if (!file.type.startsWith('image/')) return;
     const reader = new FileReader();
-    reader.onload = evt => {
-      const dataURL = evt.target.result;
-      showUploadPreview(dataURL);
+    reader.onload = (e) => {
+        const url = e.target.result;
+        uploadPreview.src = url;
+        uploadPreview.style.display = "block";
+        uploadPrompt.style.display = "none";
+        analyzeUploadBtn.disabled = false;
+        
+        analyzeUploadBtn.onclick = () => runAnalysis({ image: url });
     };
     reader.readAsDataURL(file);
-  });
-
-  uploadDropzone.addEventListener("dragover", e => {
-    e.preventDefault();
-    uploadDropzone.classList.add("dragover");
-  });
-
-  uploadDropzone.addEventListener("dragleave", e => {
-    e.preventDefault();
-    uploadDropzone.classList.remove("dragover");
-  });
-
-  uploadDropzone.addEventListener("drop", e => {
-    e.preventDefault();
-    uploadDropzone.classList.remove("dragover");
-    const file = e.dataTransfer.files && e.dataTransfer.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = evt => {
-      const dataURL = evt.target.result;
-      showUploadPreview(dataURL);
-    };
-    reader.readAsDataURL(file);
-  });
-
-  function showUploadPreview(dataURL) {
-    uploadPreview.src = dataURL;
-    uploadPreview.style.display = "block";
-    uploadPrompt.style.display = "none";
-    analyzeUploadBtn.disabled = false;
-    analyzeUploadBtn.onclick = async () => {
-      await analyzeWithBackend({ image: dataURL, queryText: "" });
-    };
   }
 
-  // Manual search
-  manualSearchBtn.addEventListener("click", () => {
-    const text = manualInput.value.trim();
-    if (!text || analyzing) return;
-    analyzeWithBackend({ image: null, queryText: text });
+  // Manual Logic
+  manualSearchBtn.addEventListener('click', () => {
+    const txt = manualInput.value.trim();
+    if(txt) runAnalysis({ queryText: txt });
+  });
+  
+  manualInput.addEventListener('keypress', (e) => {
+      if(e.key === 'Enter') manualSearchBtn.click();
   });
 
-  manualInput.addEventListener("keypress", e => {
-    if (e.key === "Enter") manualSearchBtn.click();
-  });
-
-  // ===== analyzeWithBackend (auto model) =====
-  async function analyzeWithBackend(payload) {
-    analyzing = true;
-    globalLoader.style.display = "inline-block";
-    aiStatusText.textContent = "Analyzing component…";
-
+  // Main Analysis Function
+  async function runAnalysis(payload) {
+    if(isAnalyzing) return;
+    isAnalyzing = true;
+    els.loader.style.display = "block";
+    els.status.textContent = "Processing with Gemini...";
+    
+    // Reset UI
+    els.name.textContent = "Analyzing...";
+    els.category.textContent = "Please wait";
+    
     try {
-      const res = await fetch("/api/electro-lookup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
+        const res = await fetch('/api/electro-lookup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        
+        const data = await res.json();
+        
+        if(!res.ok) throw new Error(data.error || "API Error");
+        
+        populateResults(data);
+        els.status.textContent = "Analysis Complete";
 
-      let data = null;
-      try {
-        data = await res.json();
-      } catch (parseErr) {
-        console.error("Failed to parse JSON from backend:", parseErr);
-      }
-
-      const quotaWarnings =
-        data && data.meta && Array.isArray(data.meta.quotaWarnings)
-          ? data.meta.quotaWarnings
-          : [];
-
-      // If backend returned an error (4xx/5xx), show reason + quota info
-      if (!res.ok || !data) {
-        const baseError = (data && (data.error || data.message)) || "Backend error.";
-        const detailsText = data && data.details ? ` (${data.details})` : "";
-
-        const quotaText = quotaWarnings.length
-          ? " | API quota/config notice: " +
-            quotaWarnings
-              .map(q => `${q.source}: ${q.message}`)
-              .join(" · ")
-          : "";
-
-        aiStatusText.textContent = `${baseError}${detailsText}${quotaText}`;
-
-        descriptionEl.innerHTML =
-          '<p class="placeholder">Analysis failed. This is often caused by API quota limits or missing API keys (Gemini, Google CSE, Serper). Try again later or check the server configuration.</p>';
-        return;
-      }
-
-      // Backend OK: render encyclopedia content
-      renderResult(data, payload.queryText || "");
     } catch (err) {
-      console.error(err);
-      aiStatusText.textContent =
-        "Error – check console or API configuration (Gemini / Google / Serper).";
-      descriptionEl.innerHTML =
-        '<p class="placeholder">Failed to analyze. Please verify your API keys and quotas, then try again.</p>';
+        console.error(err);
+        els.name.textContent = "Error";
+        els.desc.innerHTML = `<p style="color:#ef4444">Failed: ${err.message}. Check API configuration.</p>`;
+        els.status.textContent = "Failed";
     } finally {
-      analyzing = false;
-      globalLoader.style.display = "none";
-      cameraLoader.style.display = "none";
+        isAnalyzing = false;
+        els.loader.style.display = "none";
     }
   }
 
-  function renderList(el, arr, emptyText) {
-    el.innerHTML = "";
-    if (!Array.isArray(arr) || arr.length === 0) {
-      el.innerHTML = `<p class="placeholder">${emptyText}</p>`;
-      return;
+  function renderList(el, items) {
+    if(!items || items.length === 0) {
+        el.innerHTML = '<p class="text-muted">None available</p>';
+        return;
     }
-    const ul = document.createElement("ul");
-    arr.forEach(item => {
-      const li = document.createElement("li");
-      li.textContent = item;
-      ul.appendChild(li);
-    });
-    el.appendChild(ul);
+    el.innerHTML = `<ul>${items.map(i => `<li>${i}</li>`).join('')}</ul>`;
   }
 
-  function renderResult(r, queryText) {
-    const meta = r.meta || {};
-    const backendModel = meta.preferredModel || "auto";
-    const modelLabel = MODEL_LABELS[backendModel] || MODEL_LABELS.auto;
-
-    if (modelChip) {
-      modelChip.textContent = "Model: " + modelLabel;
-    }
-
-    const quotaWarnings = Array.isArray(meta.quotaWarnings) ? meta.quotaWarnings : [];
-
-    deviceNameEl.textContent = r.name || queryText || "Unknown device";
-    deviceCategoryEl.textContent = r.category || "Other";
-
-    // Description
-    descriptionEl.innerHTML = "";
-    const p = document.createElement("p");
-    p.textContent =
-      r.description ||
-      "Generic auto-generated encyclopedia entry. For exact pinouts and limits, always confirm with the official datasheet.";
-    descriptionEl.appendChild(p);
-
-    renderList(
-      typicalUsesEl,
-      r.typical_uses,
-      "No typical uses listed by the model."
-    );
-    renderList(
-      whereToBuyEl,
-      r.where_to_buy,
-      "No buying sources listed by the model."
-    );
-    renderList(
-      keySpecsEl,
-      r.key_specs,
-      "No key specs were returned by the model."
-    );
-    renderList(
-      projectIdeasEl,
-      r.project_ideas,
-      "No project ideas were generated by the model."
-    );
-    renderList(
-      commonMistakesEl,
-      r.common_mistakes,
-      "No common mistakes were returned by the model."
-    );
-
-    datasheetHintEl.innerHTML = "";
-    const dh = document.createElement("p");
-    dh.textContent =
-      r.datasheet_hint ||
-      "No specific datasheet hint from the model – search for the device name + 'datasheet' in your browser.";
-    datasheetHintEl.appendChild(dh);
-
-    referencesEl.innerHTML = "";
-    let hasRefs = false;
-
-    if (r.datasheet_url) {
-      const a = document.createElement("a");
-      a.href = r.datasheet_url;
-      a.target = "_blank";
-      a.rel = "noopener noreferrer";
-      a.className = "shop-btn";
-      a.textContent = "📄 Open datasheet";
-      referencesEl.appendChild(a);
-      hasRefs = true;
-    }
-
-    if (Array.isArray(r.references) && r.references.length > 0) {
-      r.references.forEach(ref => {
-        const wrapper = document.createElement("p");
-        const link = document.createElement("a");
-        link.href = ref.url;
-        link.target = "_blank";
-        link.rel = "noopener noreferrer";
-        link.className = "ref-link";
-        link.textContent = ref.title || ref.url;
-        wrapper.appendChild(link);
-        if (ref.snippet) {
-          const sn = document.createElement("div");
-          sn.className = "ref-snippet";
-          sn.textContent = ref.snippet;
-          wrapper.appendChild(sn);
+  function populateResults(data) {
+    els.name.textContent = data.name || "Unknown";
+    els.category.textContent = data.category || "General Electronics";
+    
+    els.desc.innerHTML = `<p>${data.description || "No description available."}</p>`;
+    
+    renderList(els.specs, data.key_specs);
+    renderList(els.uses, data.typical_uses);
+    renderList(els.mistakes, data.common_mistakes);
+    
+    // Images
+    const updateImg = (el, src) => {
+        if(src) {
+            el.src = src;
+            el.style.display = "block";
+        } else {
+            el.style.display = "none";
         }
-        referencesEl.appendChild(wrapper);
-        hasRefs = true;
-      });
+    };
+    updateImg(els.refImg, data.real_image);
+    updateImg(els.pinImg, data.pinout_image);
+    updateImg(els.useImg, data.usage_image);
+
+    // Links
+    els.refs.innerHTML = '';
+    if(data.datasheet_url) {
+        els.refs.innerHTML += `<a href="${data.datasheet_url}" target="_blank" class="chip-link">📄 PDF Datasheet</a>`;
+    }
+    if(data.references) {
+        data.references.forEach(r => {
+            els.refs.innerHTML += `<a href="${r.url}" target="_blank" class="chip-link">🔗 ${r.title}</a>`;
+        });
     }
 
-    if (!hasRefs) {
-      referencesEl.innerHTML =
-        '<p class="placeholder">No external references were returned. This may happen when search APIs are limited or the part name is ambiguous.</p>';
+    els.shops.innerHTML = '';
+    if(data.shop_links) {
+        Object.entries(data.shop_links).forEach(([name, url]) => {
+            els.shops.innerHTML += `<a href="${url}" target="_blank" class="chip-link">🛒 ${name}</a>`;
+        });
     }
-
-    shopLinksEl.innerHTML = "";
-    if (r.shop_links) {
-      if (r.shop_links.shopee) {
-        shopLinksEl.innerHTML += `<a class="shop-btn" href="${r.shop_links.shopee}" target="_blank">Shopee</a>`;
-      }
-      if (r.shop_links.lazada) {
-        shopLinksEl.innerHTML += `<a class="shop-btn" href="${r.shop_links.lazada}" target="_blank">Lazada</a>`;
-      }
-      if (r.shop_links.amazon) {
-        shopLinksEl.innerHTML += `<a class="shop-btn" href="${r.shop_links.amazon}" target="_blank">Amazon</a>`;
-      }
-      if (r.shop_links.aliexpress) {
-        shopLinksEl.innerHTML += `<a class="shop-btn" href="${r.shop_links.aliexpress}" target="_blank">AliExpress</a>`;
-      }
-    }
-    if (r.official_store) {
-      shopLinksEl.innerHTML += `<a class="shop-btn" href="${r.official_store}" target="_blank">Official store</a>`;
-    }
-    if (!shopLinksEl.innerHTML.trim()) {
-      shopLinksEl.innerHTML =
-        '<span class="placeholder">No online shop links generated for this item.</span>';
-    }
-
-    if (r.real_image) {
-      refImageEl.src = r.real_image;
-      refImageEl.style.display = "block";
-    } else {
-      refImageEl.style.display = "none";
-    }
-
-    if (r.usage_image) {
-      usageImageEl.src = r.usage_image;
-      usageImageEl.style.display = "block";
-    } else {
-      usageImageEl.style.display = "none";
-    }
-
-    if (r.pinout_image) {
-      pinoutImageEl.src = r.pinout_image;
-      pinoutImageEl.style.display = "block";
-    } else {
-      pinoutImageEl.style.display = "none";
-    }
-
-    // ----- Explain missing sections + possible reasons -----
-    const missingSections = [];
-
-    if (!r.description) missingSections.push("overview");
-    if (!Array.isArray(r.typical_uses) || !r.typical_uses.length) missingSections.push("typical uses");
-    if (!Array.isArray(r.where_to_buy) || !r.where_to_buy.length) missingSections.push("where to buy");
-    if (!Array.isArray(r.key_specs) || !r.key_specs.length) missingSections.push("key specs");
-    if (!Array.isArray(r.project_ideas) || !r.project_ideas.length) missingSections.push("project ideas");
-    if (!Array.isArray(r.common_mistakes) || !r.common_mistakes.length) missingSections.push("common mistakes");
-    if (!r.datasheet_url && (!Array.isArray(r.references) || !r.references.length)) missingSections.push("datasheet & references");
-    if (!r.real_image) missingSections.push("component photo");
-    if (!r.usage_image) missingSections.push("usage image");
-    if (!r.pinout_image) missingSections.push("pinout diagram");
-
-    let statusMsg = `Done – model used: ${modelLabel}.`;
-
-    if (quotaWarnings.length) {
-      const qShort = quotaWarnings.map(q => q.source).join(", ");
-      statusMsg += ` Some APIs reported quota or configuration issues: ${qShort}.`;
-    }
-
-    if (missingSections.length) {
-      statusMsg += ` Some sections are empty (${missingSections.join(", ")}). `;
-
-      if (quotaWarnings.length) {
-        statusMsg += `These gaps are likely due to those API limits or missing keys on the server.`;
-      } else {
-        statusMsg += `This can happen when the model returns limited structured data or web search can't find good matches.`;
-      }
-
-      statusMsg += " Always double-check critical specs with the official datasheet.";
-    }
-
-    if (!missingSections.length && !quotaWarnings.length) {
-      statusMsg = `Done – model used: ${modelLabel}. All sections populated. Analyze another item if you like.`;
-    }
-
-    aiStatusText.textContent = statusMsg;
+    
+    els.hint.innerHTML = `<p style="font-size:0.85rem"><i>Tip: Search Google for "${data.datasheet_hint || data.name + ' datasheet'}"</i></p>`;
   }
 
-  window.addEventListener("load", () => {
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-      cameraStatusText.textContent = "Requesting camera access…";
-      startCamera();
-    } else {
-      cameraStatusText.textContent = "Camera not supported on this device.";
-    }
+  // Auto-start camera on load if available
+  window.addEventListener('load', () => {
+    // Optional: Start camera automatically
+    // startCamera();
   });
-</script>
 
+</script>
 </body>
 </html>
