@@ -854,7 +854,7 @@
             <span class="brand-highlight">ElectroLens</span> – AI Electronics Encyclopedia
           </div>
           <div class="brand-subtitle">
-            Identify components, see specs, and explore projects using Gemini, Groq, DeepSeek, and web search.
+            Identify components, see specs, and explore projects using Gemini, and web search.
           </div>
         </div>
       </div>
@@ -969,7 +969,6 @@
               <div class="ency-title">ElectroLens Encyclopedia</div>
               <div class="ency-badges">
                 <span class="ency-chip">Gemini Vision</span>
-                <span class="ency-chip">Groq / DeepSeek</span>
                 <span class="ency-chip">Google / Serper</span>
                 <span class="ency-chip" id="modelChip">Mode: Auto</span>
               </div>
@@ -1085,10 +1084,6 @@
         <p>Gemini looks at the image or text and identifies the most likely electronics component, module, or tool.</p>
       </article>
       <article class="info-card">
-        <h3>2 · Engineering Knowledge</h3>
-        <p>Groq or DeepSeek can refine the explanation, add specs, project ideas, and safety notes like an engineer.</p>
-      </article>
-      <article class="info-card">
         <h3>3 · Real-World Links</h3>
         <p>Google Custom Search and Serper find real images, datasheets, and shop links (Shopee, Lazada, Amazon, AliExpress).</p>
       </article>
@@ -1171,10 +1166,7 @@
   let analyzing = false;
 
   const MODEL_LABELS = {
-    auto: "Auto",
     gemini: "Gemini",
-    groq: "Groq",
-    deepseek: "DeepSeek"
   };
 
   // Mode switching
@@ -1353,7 +1345,7 @@
         aiStatusText.textContent = `${baseError}${detailsText}${quotaText}`;
 
         descriptionEl.innerHTML =
-          '<p class="placeholder">Analysis failed. This is often caused by API quota limits or missing API keys (Gemini, Groq, DeepSeek, Google CSE, Serper). Try again later or check the server configuration.</p>';
+          '<p class="placeholder">Analysis failed. This is often caused by API quota limits or missing API keys (Gemini, Google CSE, Serper). Try again later or check the server configuration.</p>';
         return;
       }
 
@@ -1362,7 +1354,7 @@
     } catch (err) {
       console.error(err);
       aiStatusText.textContent =
-        "Error – check console or API configuration (Gemini / Groq / DeepSeek / Google / Serper).";
+        "Error – check console or API configuration (Gemini / Google / Serper).";
       descriptionEl.innerHTML =
         '<p class="placeholder">Failed to analyze. Please verify your API keys and quotas, then try again.</p>';
     } finally {
