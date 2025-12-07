@@ -118,54 +118,9 @@ Use this to fill the JSON schema. If not clearly electronics, set category "Othe
 }
 
 // ===========================
-// LLM helpers (fallback chain)
+// Fallback LLMs (DeepSeek, Groq)
 // ===========================
 
-// 1) Gemini (with image support)
-async function callGemini(image, safeQueryText) {
-  const geminiKey = process.env.GOOGLE_API_KEY;
-  if (!geminiKey) {
-    console.warn("⚠️ GOOGLE_API_KEY missing, skipping Gemini.");
-    return null;
-  }
-
-  try {
-    const genAI = new GoogleGenerativeAI(geminiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-
-    const parts = [{ text: ELECTROLENS_SCHEMA_PROMPT }];
-
-    if (image) {
-      const extracted = extractBase64FromDataUrl(image);
-      if (!extracted) {
-        console.warn("⚠️ Invalid base64 image format for Gemini, skipping image.");
-      } else {
-        parts.push({
-          inlineData: { mimeType: extracted.mimeType, data: extracted.base64 },
-        });
-      }
-      if (safeQueryText) {
-        parts.push({ text: `User text label: "${safeQueryText}"` });
-      }
-    } else {
-      parts.push({ text: `User typed query: "${safeQueryText}"` });
-    }
-
-    const geminiResp = await model.generateContent({
-      contents: [{ role: "user", parts }],
-      generationConfig: { responseMimeType: "application/json" },
-    });
-
-    const raw = geminiResp.response.text; // library’s helper
-    const jsonString = raw.replace(/```json\n?|```/g, "").trim();
-    return JSON.parse(jsonString);
-  } catch (err) {
-    console.error("Gemini failed:", err);
-    return null;
-  }
-}
-
-// 2) DeepSeek (text-only, fallback)
 async function callDeepSeek(hasImage, safeQueryText) {
   const deepSeekKey = process.env.DEEPSEEK_API_KEY;
   if (!deepSeekKey) {
@@ -205,14 +160,15 @@ async function callDeepSeek(hasImage, safeQueryText) {
     if (!text) return null;
 
     const jsonString = text.replace(/```json\n?|```/g, "").trim();
-    return JSON.parse(jsonString);
+    const parsed = JSON.parse(jsonString);
+    parsed._provider = "deepseek";
+    return parsed;
   } catch (err) {
     console.error("DeepSeek failed:", err);
     return null;
   }
 }
 
-// 3) Groq (text-only, fallback)
 async function callGroq(hasImage, safeQueryText) {
   const groqKey = process.env.GROQ_API_KEY;
   if (!groqKey) {
@@ -252,35 +208,22 @@ async function callGroq(hasImage, safeQueryText) {
     if (!text) return null;
 
     const jsonString = text.replace(/```json\n?|```/g, "").trim();
-    return JSON.parse(jsonString);
+    const parsed = JSON.parse(jsonString);
+    parsed._provider = "groq";
+    return parsed;
   } catch (err) {
     console.error("Groq failed:", err);
     return null;
   }
 }
 
-// Helper: run the chain Gemini -> DeepSeek -> Groq
-async function getComponentJsonFromLLMs(image, safeQueryText) {
-  // Try Gemini first (multimodal)
-  let baseJson = await callGemini(image, safeQueryText);
-  if (baseJson) {
-    baseJson._provider = "gemini";
-    return baseJson;
-  }
+// Try DeepSeek then Groq
+async function getFallbackJson(hasImage, safeQueryText) {
+  const ds = await callDeepSeek(hasImage, safeQueryText);
+  if (ds) return ds;
 
-  // Fallback: DeepSeek (text only)
-  baseJson = await callDeepSeek(!!image, safeQueryText);
-  if (baseJson) {
-    baseJson._provider = "deepseek";
-    return baseJson;
-  }
-
-  // Fallback: Groq (text only)
-  baseJson = await callGroq(!!image, safeQueryText);
-  if (baseJson) {
-    baseJson._provider = "groq";
-    return baseJson;
-  }
+  const gr = await callGroq(hasImage, safeQueryText);
+  if (gr) return gr;
 
   return null;
 }
@@ -479,13 +422,69 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Provide an image or queryText." });
     }
 
-    // ===== LLM chain: Gemini -> DeepSeek -> Groq =====
-    const baseJson = await getComponentJsonFromLLMs(image, safeQueryText);
-    if (!baseJson) {
-      return res
-        .status(500)
-        .json({ error: "All AI providers failed to return valid JSON." });
+    // ===== 1) Try GEMINI (primary, can see image) =====
+    let baseJson = null;
+    let provider = null;
+
+    try {
+      const geminiKey = process.env.GOOGLE_API_KEY;
+      if (!geminiKey) {
+        console.warn("⚠️ GOOGLE_API_KEY missing, skipping Gemini.");
+      } else {
+        const genAI = new GoogleGenerativeAI(geminiKey);
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+        const parts = [{ text: ELECTROLENS_SCHEMA_PROMPT }];
+
+        if (image) {
+          const extracted = extractBase64FromDataUrl(image);
+          if (!extracted) {
+            console.warn("⚠️ Invalid base64 image format, Gemini will ignore image.");
+          } else {
+            parts.push({
+              inlineData: {
+                mimeType: extracted.mimeType,
+                data: extracted.base64,
+              },
+            });
+          }
+
+          if (safeQueryText) {
+            parts.push({ text: `User text label: "${safeQueryText}"` });
+          }
+        } else {
+          parts.push({ text: `User typed query: "${safeQueryText}"` });
+        }
+
+        const geminiResp = await model.generateContent({
+          contents: [{ role: "user", parts }],
+          generationConfig: { responseMimeType: "application/json" },
+        });
+
+        // NOTE: this matches your previous working code style
+        const raw = geminiResp.response.text;
+        const jsonString = raw.replace(/```json\n?|```/g, "").trim();
+        baseJson = JSON.parse(jsonString);
+        provider = "gemini";
+      }
+    } catch (err) {
+      console.error("Gemini failed, will try fallback models:", err);
+      baseJson = null;
     }
+
+    // ===== 2) Fallback → DeepSeek then Groq (text only) =====
+    if (!baseJson) {
+      const fb = await getFallbackJson(!!image, safeQueryText);
+      if (!fb) {
+        return res.status(500).json({
+          error: "All AI providers failed to return valid JSON.",
+        });
+      }
+      baseJson = fb;
+      provider = baseJson._provider || "fallback";
+    }
+
+    baseJson._provider = provider; // keep track of which model was used
 
     const nameOrQuery =
       baseJson.image_search_query ||
