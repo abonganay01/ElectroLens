@@ -1,23 +1,7 @@
 // api/electro-lookup.js
 
 // Uses Node runtime (Vercel serverless / Node, NOT Edge)
-// Dynamic loader for Google Generative AI SDK.
-// Tries the modern package name first, then falls back to the older one.
-async function loadGoogleGenerativeAI() {
-  try {
-    const mod = await import("@google-generative-ai/google-generative-ai");
-    return mod.GoogleGenerativeAI || mod.default || mod;
-  } catch (err1) {
-    try {
-      const mod = await import("@google/generative-ai");
-      return mod.GoogleGenerativeAI || mod.default || mod;
-    } catch (err2) {
-      throw new Error(
-        "Google Generative AI SDK not found. Install '@google-generative-ai/google-generative-ai' or '@google/generative-ai'."
-      );
-    }
-  }
-}
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // ---------------------------------------------------------
 // Vercel / Next API config: disable automatic body parsing
@@ -78,8 +62,114 @@ function isQuotaStatus(status) {
   return status === 429 || status === 402 || status === 403;
 }
 
-// ========== Serper API helpers (for datasheets & references only) ==========
+// ========== Google Custom Search helpers ==========
+
+async function googleImageSearch(query, quotaWarnings = []) {
+  const apiKey = process.env.CSE_API_KEY;
+  const cx = process.env.CSE_CX;
+  if (!apiKey || !cx || !query) return null;
+
+  const url = `https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(
+    query
+  )}&searchType=image&num=1&safe=active&key=${apiKey}&cx=${cx}`;
+
+  try {
+    const res = await fetch(url);
+    if (!res.ok) {
+      console.error("Image search HTTP error (Google):", res.status);
+      if (isQuotaStatus(res.status)) {
+        quotaWarnings.push({
+          source: "google_cse_images",
+          status: res.status,
+          message: "Google Custom Search image quota or billing limit reached.",
+        });
+      }
+      return null;
+    }
+    const data = await res.json();
+    return data.items?.[0]?.link || null;
+  } catch (err) {
+    console.error("Google image search error:", err);
+    return null;
+  }
+}
+
+// ========== Serper API helpers (images + datasheet fallback) ==========
 // Docs: https://serper.dev
+
+async function serperImageSearch(query, quotaWarnings = []) {
+  const serperKey = process.env.SERPER_API_KEY;
+  if (!serperKey || !query) return null;
+
+  try {
+    const res = await fetch("https://google.serper.dev/images", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-API-KEY": serperKey,
+      },
+      body: JSON.stringify({
+        q: query,
+        num: 1,
+      }),
+    });
+
+    if (!res.ok) {
+      console.error("Serper image search HTTP error:", res.status);
+      if (isQuotaStatus(res.status)) {
+        quotaWarnings.push({
+          source: "serper_images",
+          status: res.status,
+          message: "Serper image search quota or billing limit reached.",
+        });
+      }
+      return null;
+    }
+
+    const data = await res.json();
+    const first = Array.isArray(data.images) ? data.images[0] : null;
+    if (!first) return null;
+
+    return first.imageUrl || first.thumbnailUrl || first.link || null;
+  } catch (err) {
+    console.error("Serper image search error:", err);
+    return null;
+  }
+}
+
+// unified helper: Google first, then Serper
+async function smartImageSearch(query, quotaWarnings = []) {
+  if (!query) return null;
+
+  // Try Google CSE first
+  let url = await googleImageSearch(query, quotaWarnings);
+  if (url) return url;
+
+  console.warn(
+    "Google image search failed or quota exceeded – falling back to Serper."
+  );
+  url = await serperImageSearch(query, quotaWarnings);
+  return url || null;
+}
+
+// Wrappers that keep your original function names
+async function fetchRealImageFromGoogle(nameOrQuery, quotaWarnings = []) {
+  return smartImageSearch(nameOrQuery, quotaWarnings);
+}
+
+async function fetchUsageImageFromGoogle(nameOrQuery, quotaWarnings = []) {
+  // try to get an application / example circuit image
+  const q = `${nameOrQuery} application circuit electronics example`;
+  return smartImageSearch(q, quotaWarnings);
+}
+
+async function fetchPinoutImageFromGoogle(nameOrQuery, quotaWarnings = []) {
+  // try to get a pinout diagram
+  const q = `${nameOrQuery} pinout diagram`;
+  return smartImageSearch(q, quotaWarnings);
+}
+
+// ---------- Datasheets & references: Google first, Serper fallback ----------
 
 async function serperDatasheetSearch(query, quotaWarnings = []) {
   const serperKey = process.env.SERPER_API_KEY;
@@ -141,8 +231,6 @@ async function serperDatasheetSearch(query, quotaWarnings = []) {
     return { datasheetUrl: null, references: [] };
   }
 }
-
-// ---------- Datasheets & references: Google CSE first, Serper fallback ----------
 
 async function googleDatasheetAndReferences(name, quotaWarnings = []) {
   const apiKey = process.env.CSE_API_KEY;
@@ -258,8 +346,54 @@ You receive a JSON object describing an electronics component, module, or tool.
 Your job is to REWRITE and ENRICH that JSON with very complete, realistic information,
 while keeping the SAME keys that already exist. Do not rename keys.
 
-[...same content as before omitted for brevity in this comment...]
-Return ONLY a valid JSON object. No markdown, no extra commentary, no code fences.
+For each field:
+
+- "name":
+  • Keep it short but specific.
+  • Include common designation if obvious (e.g. "ESP32 DevKit board", "LM7805 linear regulator TO-220").
+  • Do not invent fake part numbers.
+
+- "category":
+  • Keep a broad label: "Component", "Microcontroller", "Module", "Tool", "Test Equipment", "Power Supply", "Other".
+
+- "description":
+  • Write 3–6 detailed paragraphs.
+  • Cover:
+    1) What type of device this is and its role in electronics.
+    2) High-level principle of operation.
+    3) Typical electrical characteristics (voltages, currents, logic levels, etc.).
+    4) Common uses in real circuits or lab setups.
+    5) Important limitations and design caveats (e.g. heat, noise, accuracy, switching limits).
+
+- "typical_uses":
+  • Provide 4–8 bullet points.
+  • Each bullet should be a real, concrete application.
+
+- "where_to_buy":
+  • Provide 4–8 bullet points.
+  • Include generic local shops, online marketplaces (Shopee, Lazada, Amazon, AliExpress),
+    and professional distributors (Mouser, Digi-Key, RS, element14) where reasonable.
+
+- "key_specs":
+  • Provide 6–12 bullet points.
+  • Include key voltages, currents, power ratings, tolerances, package type, input/output behavior, frequency range, etc.
+  • If exact values are unknown, use typical ranges and clearly say "typically" or "commonly".
+
+- "project_ideas":
+  • Provide 3–6 student-friendly projects.
+  • Explain how this component is used in each project.
+
+- "common_mistakes":
+  • Provide 5–10 realistic mistakes and warnings.
+  • Mention why they are problems (overheating, incorrect biasing, wrong supply voltage, missing flyback diode, etc.).
+
+- "datasheet_hint":
+  • Give ONE realistic search string the user can paste into Google to find the official datasheet.
+
+GENERAL:
+- Do not contradict clear information already in the JSON.
+- Never claim impossible or absurd electrical values.
+- Return ONLY a valid JSON object. No markdown, no extra commentary, no code fences.
 `;
 
   const body = {
@@ -322,10 +456,10 @@ You receive a JSON object describing an electronics component, module, or tool.
 Your job is to REWRITE and ENRICH that JSON with very complete, realistic information,
 while keeping the SAME keys that already exist. Do not rename keys.
 
-Use the SAME JSON schema as Groq refine:
+Use the SAME JSON schema as the input:
 - name, category, description, typical_uses, where_to_buy, key_specs,
   datasheet_hint, project_ideas, common_mistakes, plus any extra fields that
-  might already exist (like real_image, usage_image, etc.) – do not delete them.
+  might already exist (like real_image, usage_image, datasheet_url, references, shop_links).
 
 Return ONLY a valid JSON object. No markdown, no extra commentary, no code fences.
 `;
@@ -425,6 +559,9 @@ Return STRICT JSON ONLY in this shape:
   "common_mistakes": [],
   "image_search_query": ""
 }
+
+- "category": one of "Component", "Microcontroller", "Module", "Tool", "Test Equipment", "Power Supply", "Other".
+- Do NOT include any extra fields or text outside the JSON.
 `;
 
   const body = {
@@ -456,14 +593,14 @@ Return STRICT JSON ONLY in this shape:
           source: "groq_text_fallback",
           status: res.status,
           message:
-            "Groq text-only fallback quota or billing limit reached. Using simple fallback instead.",
+            "Groq text-only quota or billing limit reached. Using simple fallback instead.",
         });
       } else {
         quotaWarnings.push({
           source: "groq_text_fallback",
           status: res.status,
           message:
-            "Groq text-only fallback returned HTTP " +
+            "Groq text-only returned HTTP " +
             res.status +
             ". Using simple fallback instead.",
         });
@@ -548,6 +685,9 @@ Return STRICT JSON ONLY in this exact shape:
   "common_mistakes": [],
   "image_search_query": ""
 }
+
+- "category": one of "Component", "Microcontroller", "Module", "Tool", "Test Equipment", "Power Supply", "Other".
+- Do NOT include any extra fields or text outside the JSON.
 `;
 
   const body = {
@@ -620,89 +760,6 @@ Return STRICT JSON ONLY in this exact shape:
   }
 }
 
-// ========== Gemini-based image URL search ==========
-
-async function fetchImagesWithGemini(nameOrQuery, quotaWarnings = []) {
-  const geminiKey = process.env.GOOGLE_API_KEY;
-  if (!geminiKey || !nameOrQuery) {
-    return {
-      real_image: null,
-      usage_image: null,
-      pinout_image: null,
-    };
-  }
-
-  const prompt = `
-You are ElectroLens, an assistant specialized in electronics.
-
-Given this component or module name:
-
-"${nameOrQuery}"
-
-Propose up to 3 representative image URLs:
-
-- "real_image": a realistic photo of the actual part or module.
-- "usage_image": a photo or illustration showing how it is used in a circuit or project.
-- "pinout_image": a schematic-style pinout or labeled diagram, if it exists.
-
-Return STRICT JSON ONLY:
-
-{
-  "real_image": "https://...",
-  "usage_image": "https://...",
-  "pinout_image": "https://..."
-}
-`;
-
-  try {
-    const GoogleGenerativeAI = await loadGoogleGenerativeAI();
-    const genAI = new GoogleGenerativeAI(geminiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-
-    const resp = await model.generateContent({
-      contents: [
-        {
-          role: "user",
-          parts: [{ text: prompt }],
-        },
-      ],
-      generationConfig: { responseMimeType: "application/json" },
-    });
-
-    const text = resp.response.text();
-    const parsed = JSON.parse(text);
-
-    return {
-      real_image: parsed.real_image || null,
-      usage_image: parsed.usage_image || null,
-      pinout_image: parsed.pinout_image || null,
-    };
-  } catch (err) {
-    const msg = String(err || "");
-    const isQuotaError =
-      msg.includes("429") ||
-      msg.includes("You exceeded your current quota") ||
-      msg.includes("Quota exceeded for metric");
-
-    if (isQuotaError) {
-      quotaWarnings.push({
-        source: "gemini_images",
-        status: 429,
-        message:
-          "Gemini quota exceeded for image URL lookup. Image URLs may be missing.",
-      });
-    } else {
-      console.error("Gemini image fetch error:", err);
-    }
-
-    return {
-      real_image: null,
-      usage_image: null,
-      pinout_image: null,
-    };
-  }
-}
-
 // ========== Main handler ==========
 
 export default async function handler(req, res) {
@@ -711,12 +768,12 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
+  // Collect quota-related warnings here and return in meta.quotaWarnings
   const quotaWarnings = [];
 
   try {
-    const body = await readJsonBody(req);
+    const body = await readJsonBody(req); // works for camera, upload, and type search
     const { image } = body || {};
-
     const rawQueryText =
       body && typeof body.queryText === "string" ? body.queryText : "";
     const safeQueryText = rawQueryText.trim();
@@ -727,25 +784,26 @@ export default async function handler(req, res) {
         ? body.preferredModel.toLowerCase()
         : "auto";
     const allowedModels = ["auto", "gemini", "groq", "deepseek"];
-    const preferredModel = allowedModels.includes(preferredRaw)
+    let preferredModel = allowedModels.includes(preferredRaw)
       ? preferredRaw
       : "auto";
+    let backendModel = preferredModel; // will update if we fall back
 
     if (!image && !safeQueryText) {
       return res.status(400).json({
         error: "Provide an image or queryText.",
-        meta: { quotaWarnings, preferredModel },
+        meta: { quotaWarnings, preferredModel: backendModel },
       });
     }
 
-    const hasImage = !!image;
-    let baseJson = null;
+    const geminiKey = process.env.GOOGLE_API_KEY;
 
-    // ========== 1. Get baseJson depending on preferredModel & mode ==========
+    let baseJson;
 
-    if (hasImage) {
-      // Image-based: Gemini Vision is required for detection
-      const geminiKey = process.env.GOOGLE_API_KEY;
+    // ========== 1. Get baseJson depending on mode & preferred model ==========
+
+    if (image) {
+      // ----- IMAGE MODE: Gemini Vision is required -----
       if (!geminiKey) {
         console.error("Missing GOOGLE_API_KEY for image mode");
         quotaWarnings.push({
@@ -756,21 +814,29 @@ export default async function handler(req, res) {
         });
         return res.status(500).json({
           error:
-            "Server misconfigured: GOOGLE_API_KEY missing. Image-based analysis requires Gemini.",
-          meta: { quotaWarnings, preferredModel },
+            "Server misconfigured: GOOGLE_API_KEY missing. Camera and upload analysis require Gemini Vision.",
+          meta: { quotaWarnings, preferredModel: backendModel },
         });
       }
 
-      const GoogleGenerativeAI = await loadGoogleGenerativeAI();
       const genAI = new GoogleGenerativeAI(geminiKey);
       const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
       const basePrompt = `
 You are ElectroLens, an assistant specialized ONLY in electronics-related items.
 
-[...same description prompt as before...]
+FOCUS ONLY on:
+- Electronic components (resistors, capacitors, diodes, transistors, ICs, regulators, etc.)
+- Microcontrollers / dev boards (ESP32, Arduino, STM32, etc.)
+- Modules (sensor modules, relay modules, power modules, communication modules, etc.)
+- Test equipment (multimeters, oscilloscopes, power supplies, etc.)
+- Common electronics tools (soldering iron, breadboard, jumper wires, etc.)
+- Consumer electronics devices (if clearly visible) but described from an electronics engineering perspective.
 
-Return STRICT JSON ONLY with:
+If the object is NOT electronics-related, treat it as "Other" and explain briefly.
+
+Return STRICT JSON ONLY in this shape:
+
 {
   "name": "",
   "category": "",
@@ -783,6 +849,17 @@ Return STRICT JSON ONLY with:
   "common_mistakes": [],
   "image_search_query": ""
 }
+
+- "name": short and specific.
+- "category": one of "Component", "Microcontroller", "Module", "Tool", "Test Equipment", "Power Supply", "Other".
+- "description": 1–3 paragraphs (base version, may be expanded later).
+- "typical_uses": 2–5 short bullet ideas.
+- "where_to_buy": 2–5 bullet ideas.
+- "key_specs": 3–8 bullet specs.
+- "datasheet_hint": what to search on Google to find the datasheet.
+- "project_ideas": 2–4 very short project ideas.
+- "common_mistakes": 3–6 short mistakes.
+- "image_search_query": the best search phrase to find images of this exact device (e.g. "ESP32 DevKitC board", "LM7805 TO-220").
 `;
 
       const parts = [{ text: basePrompt }];
@@ -792,17 +869,15 @@ Return STRICT JSON ONLY with:
         return res.status(400).json({
           error:
             "Image must be a base64 data URL like data:image/jpeg;base64,...",
-          meta: { quotaWarnings, preferredModel },
+          meta: { quotaWarnings, preferredModel: backendModel },
         });
       }
-
       parts.push({
         inlineData: {
           mimeType: extracted.mimeType,
           data: extracted.base64,
         },
       });
-
       if (safeQueryText) {
         parts.push({ text: `User text label: "${safeQueryText}"` });
       }
@@ -815,6 +890,8 @@ Return STRICT JSON ONLY with:
 
         const rawText = geminiResp.response.text();
         baseJson = JSON.parse(rawText);
+        // In image-mode, Gemini always does the first pass.
+        // Refinement later will be chosen by backendModel.
       } catch (err) {
         const msg = String(err || "");
         const isQuotaError =
@@ -823,42 +900,39 @@ Return STRICT JSON ONLY with:
           msg.includes("Quota exceeded for metric");
 
         if (isQuotaError) {
-          console.error("Gemini quota exceeded for vision:", msg);
+          console.error("Gemini quota exceeded. Raw error:", msg);
           quotaWarnings.push({
             source: "gemini",
             status: 429,
             message:
-              "Gemini free-tier quota exceeded for vision. Image-based analysis is unavailable.",
+              "Gemini free-tier quota exceeded for model gemini-2.5-flash. Image-based analysis may be unavailable.",
           });
 
           return res.status(429).json({
             error: "Gemini vision quota exceeded.",
             details:
-              "Camera and upload analysis require Gemini (vision). Your free-tier Gemini quota is used up.",
-            meta: { quotaWarnings, preferredModel },
+              "Camera and upload analysis require Gemini (vision). Your free-tier Gemini quota is used up. Try again after the quota resets or upgrade your Gemini plan.",
+            meta: { quotaWarnings, preferredModel: backendModel },
           });
         } else {
-          console.error("Gemini vision error:", err);
+          console.error("Gemini error:", err);
           return res.status(500).json({
-            error: "Failed to call Gemini vision generateContent.",
+            error: "Failed to call Gemini generateContent for image.",
             details: msg,
-            meta: { quotaWarnings, preferredModel },
+            meta: { quotaWarnings, preferredModel: backendModel },
           });
         }
       }
     } else {
-      // TEXT-ONLY MODE
+      // ----- TEXT-ONLY MODE -----
       if (preferredModel === "groq") {
         baseJson = await groqDescribeFromText(safeQueryText, quotaWarnings);
+        backendModel = "groq";
       } else if (preferredModel === "deepseek") {
-        baseJson = await deepseekDescribeFromText(
-          safeQueryText,
-          quotaWarnings
-        );
+        baseJson = await deepseekDescribeFromText(safeQueryText, quotaWarnings);
+        backendModel = "deepseek";
       } else {
-        // auto or gemini → Gemini-first, Groq fallback
-        const geminiKey = process.env.GOOGLE_API_KEY;
-
+        // auto or gemini → Gemini-first with Groq fallback
         if (!geminiKey) {
           quotaWarnings.push({
             source: "gemini",
@@ -867,17 +941,36 @@ Return STRICT JSON ONLY with:
               "GOOGLE_API_KEY is missing. Falling back to Groq text-only description.",
           });
           baseJson = await groqDescribeFromText(safeQueryText, quotaWarnings);
+          backendModel = "groq";
         } else {
-          const GoogleGenerativeAI = await loadGoogleGenerativeAI();
           const genAI = new GoogleGenerativeAI(geminiKey);
-          const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+          const model = genAI.getGenerativeModel({
+            model: "gemini-2.5-flash",
+          });
 
           const basePrompt = `
 You are ElectroLens, an assistant specialized ONLY in electronics-related items.
 
-[...same text-only Gemini prompt...]
+FOCUS ONLY on electronics-related items. If the query is not electronics-related,
+still return a JSON entry with category "Other" and explain briefly.
 
-Return STRICT JSON ONLY with the standard schema.
+Return STRICT JSON ONLY in this shape:
+
+{
+  "name": "",
+  "category": "",
+  "description": "",
+  "typical_uses": [],
+  "where_to_buy": [],
+  "key_specs": [],
+  "datasheet_hint": "",
+  "project_ideas": [],
+  "common_mistakes": [],
+  "image_search_query": ""
+}
+
+- "category": one of "Component", "Microcontroller", "Module", "Tool", "Test Equipment", "Power Supply", "Other".
+- Do NOT include any extra fields or text outside the JSON.
 `;
 
           const parts = [
@@ -893,6 +986,7 @@ Return STRICT JSON ONLY with the standard schema.
 
             const rawText = geminiResp.response.text();
             baseJson = JSON.parse(rawText);
+            backendModel = preferredModel === "gemini" ? "gemini" : "auto";
           } catch (err) {
             const msg = String(err || "");
             const isQuotaError =
@@ -913,12 +1007,13 @@ Return STRICT JSON ONLY with the standard schema.
                 safeQueryText,
                 quotaWarnings
               );
+              backendModel = "groq";
             } else {
               console.error("Gemini text error:", err);
               return res.status(500).json({
-                error: "Failed to call Gemini generateContent.",
+                error: "Failed to call Gemini generateContent for text.",
                 details: msg,
-                meta: { quotaWarnings, preferredModel },
+                meta: { quotaWarnings, preferredModel: backendModel },
               });
             }
           }
@@ -926,7 +1021,7 @@ Return STRICT JSON ONLY with the standard schema.
       }
     }
 
-    // ========== 2. Post-processing: images, datasheets, shops ==========
+    // ========== 2. Web-based images & datasheets, driven by the model's guess ==========
 
     const nameOrQuery =
       baseJson.image_search_query ||
@@ -934,11 +1029,21 @@ Return STRICT JSON ONLY with the standard schema.
       safeQueryText ||
       "electronics component";
 
-    const imgResult = await fetchImagesWithGemini(nameOrQuery, quotaWarnings);
-    baseJson.real_image = imgResult.real_image;
-    baseJson.usage_image = imgResult.usage_image;
-    baseJson.pinout_image = imgResult.pinout_image;
+    // Images via Google CSE + Serper fallback
+    baseJson.real_image = await fetchRealImageFromGoogle(
+      nameOrQuery,
+      quotaWarnings
+    );
+    baseJson.usage_image = await fetchUsageImageFromGoogle(
+      nameOrQuery,
+      quotaWarnings
+    );
+    baseJson.pinout_image = await fetchPinoutImageFromGoogle(
+      nameOrQuery,
+      quotaWarnings
+    );
 
+    // Datasheet + references (Google first, Serper fallback)
     const ds = await fetchDatasheetAndReferences(
       baseJson.name || safeQueryText || "",
       quotaWarnings
@@ -946,23 +1051,25 @@ Return STRICT JSON ONLY with the standard schema.
     baseJson.datasheet_url = ds.datasheetUrl;
     baseJson.references = ds.references;
 
+    // Shop links (template)
     baseJson.shop_links = generateShopLinks(
       baseJson.name || safeQueryText || "electronics"
     );
 
-    // ========== 3. Model-specific refinement ==========
+    // ========== 3. Model-specific refinement (encyclopedia text) ==========
 
     let refined = baseJson;
 
-    if (preferredModel === "deepseek") {
+    if (backendModel === "deepseek") {
       refined = await deepseekRefine(baseJson, quotaWarnings);
-    } else if (preferredModel === "groq" || preferredModel === "auto") {
+    } else if (backendModel === "groq" || backendModel === "auto") {
       refined = await groqRefine(baseJson, quotaWarnings);
-    } else {
-      // preferredModel === "gemini" → keep Gemini baseJson as-is
+    } else if (backendModel === "gemini") {
+      // Gemini-only: keep baseJson as-is
       refined = baseJson;
     }
 
+    // Preserve server-generated URLs & links even if refined object drops them
     const finalJson = {
       ...refined,
       real_image: baseJson.real_image,
@@ -973,7 +1080,7 @@ Return STRICT JSON ONLY with the standard schema.
       shop_links: baseJson.shop_links,
       meta: {
         quotaWarnings,
-        preferredModel,
+        preferredModel: backendModel,
       },
     };
 
