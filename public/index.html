@@ -1099,369 +1099,412 @@
     </footer>
   </div>
 
-  <script>
-    // Theme toggle
-    const themeToggleBtn = document.getElementById("themeToggle");
-    const root = document.documentElement;
+<script>
+  // Theme toggle
+  const themeToggleBtn = document.getElementById("themeToggle");
+  const root = document.documentElement;
 
-    function applyTheme(theme) {
-      root.setAttribute("data-theme", theme);
-      localStorage.setItem("electrolens-theme", theme);
-      themeToggleBtn.textContent = theme === "dark" ? "🌙" : "☀";
-    }
+  function applyTheme(theme) {
+    root.setAttribute("data-theme", theme);
+    localStorage.setItem("electrolens-theme", theme);
+    themeToggleBtn.textContent = theme === "dark" ? "🌙" : "☀";
+  }
 
-    (function initTheme() {
-      const saved = localStorage.getItem("electrolens-theme");
-      const initial = saved === "light" ? "light" : "dark";
-      applyTheme(initial);
-    })();
+  (function initTheme() {
+    const saved = localStorage.getItem("electrolens-theme");
+    const initial = saved === "light" ? "light" : "dark";
+    applyTheme(initial);
+  })();
 
-    themeToggleBtn.addEventListener("click", () => {
-      const current = root.getAttribute("data-theme") || "dark";
-      const next = current === "dark" ? "light" : "dark";
-      applyTheme(next);
-    });
+  themeToggleBtn.addEventListener("click", () => {
+    const current = root.getAttribute("data-theme") || "dark";
+    const next = current === "dark" ? "light" : "dark";
+    applyTheme(next);
+  });
 
-    // DOM references for scanner
-    const modeTabs = document.querySelectorAll(".mode-tab");
-    const modePanels = {
-      camera: document.getElementById("mode-camera"),
-      upload: document.getElementById("mode-upload"),
-      manual: document.getElementById("mode-manual"),
-    };
+  // DOM references for scanner
+  const modeTabs = document.querySelectorAll(".mode-tab");
+  const modePanels = {
+    camera: document.getElementById("mode-camera"),
+    upload: document.getElementById("mode-upload"),
+    manual: document.getElementById("mode-manual"),
+  };
 
-    const video = document.getElementById("camera");
-    const cameraPreview = document.getElementById("cameraCapturePreview");
-    const analyzeCameraBtn = document.getElementById("analyzeCameraBtn");
-    const toggleCameraBtn = document.getElementById("toggleCameraBtn");
-    const cameraStatusText = document.getElementById("cameraStatusText");
-    const cameraLoader = document.getElementById("cameraLoader");
+  const video = document.getElementById("camera");
+  const cameraPreview = document.getElementById("cameraCapturePreview");
+  const analyzeCameraBtn = document.getElementById("analyzeCameraBtn");
+  const toggleCameraBtn = document.getElementById("toggleCameraBtn");
+  const cameraStatusText = document.getElementById("cameraStatusText");
+  const cameraLoader = document.getElementById("cameraLoader");
 
-    const uploadDropzone = document.getElementById("uploadDropzone");
-    const uploadPrompt = document.getElementById("uploadPrompt");
-    const uploadPreview = document.getElementById("uploadPreview");
-    const fileInput = document.getElementById("fileInput");
-    const analyzeUploadBtn = document.getElementById("analyzeUploadBtn");
+  const uploadDropzone = document.getElementById("uploadDropzone");
+  const uploadPrompt = document.getElementById("uploadPrompt");
+  const uploadPreview = document.getElementById("uploadPreview");
+  const fileInput = document.getElementById("fileInput");
+  const analyzeUploadBtn = document.getElementById("analyzeUploadBtn");
 
-    const manualInput = document.getElementById("manualInput");
-    const manualSearchBtn = document.getElementById("manualSearchBtn");
+  const manualInput = document.getElementById("manualInput");
+  const manualSearchBtn = document.getElementById("manualSearchBtn");
 
-    const canvas = document.getElementById("captureCanvas");
+  const canvas = document.getElementById("captureCanvas");
 
-    const deviceNameEl = document.getElementById("deviceName");
-    const deviceCategoryEl = document.getElementById("deviceCategory");
-    const descriptionEl = document.getElementById("description");
-    const typicalUsesEl = document.getElementById("typicalUses");
-    const whereToBuyEl = document.getElementById("whereToBuy");
-    const keySpecsEl = document.getElementById("keySpecs");
-    const projectIdeasEl = document.getElementById("projectIdeas");
-    const commonMistakesEl = document.getElementById("commonMistakes");
-    const datasheetHintEl = document.getElementById("datasheetHint");
-    const referencesEl = document.getElementById("referencesSection");
-    const shopLinksEl = document.getElementById("shopLinks");
-    const refImageEl = document.getElementById("refImage");
-    const usageImageEl = document.getElementById("usageImage");
-    const pinoutImageEl = document.getElementById("pinoutImage");
-    const aiStatusText = document.getElementById("aiStatusText");
-    const globalLoader = document.getElementById("globalLoader");
+  const deviceNameEl = document.getElementById("deviceName");
+  const deviceCategoryEl = document.getElementById("deviceCategory");
+  const descriptionEl = document.getElementById("description");
+  const typicalUsesEl = document.getElementById("typicalUses");
+  const whereToBuyEl = document.getElementById("whereToBuy");
+  const keySpecsEl = document.getElementById("keySpecs");
+  const projectIdeasEl = document.getElementById("projectIdeas");
+  const commonMistakesEl = document.getElementById("commonMistakes");
+  const datasheetHintEl = document.getElementById("datasheetHint");
+  const referencesEl = document.getElementById("referencesSection");
+  const shopLinksEl = document.getElementById("shopLinks");
+  const refImageEl = document.getElementById("refImage");
+  const usageImageEl = document.getElementById("usageImage");
+  const pinoutImageEl = document.getElementById("pinoutImage");
+  const aiStatusText = document.getElementById("aiStatusText");
+  const globalLoader = document.getElementById("globalLoader");
 
-    let cameraStream = null;
-    let analyzing = false;
+  let cameraStream = null;
+  let analyzing = false;
 
-    // Mode switching
-    modeTabs.forEach(tab => {
-      tab.addEventListener("click", () => {
-        const mode = tab.dataset.mode;
-        modeTabs.forEach(t => t.classList.remove("active"));
-        tab.classList.add("active");
+  // Mode switching
+  modeTabs.forEach(tab => {
+    tab.addEventListener("click", () => {
+      const mode = tab.dataset.mode;
+      modeTabs.forEach(t => t.classList.remove("active"));
+      tab.classList.add("active");
 
-        Object.keys(modePanels).forEach(key => {
-          modePanels[key].style.display = key === mode ? "block" : "none";
-        });
-
-        if (mode !== "camera") stopCamera();
+      Object.keys(modePanels).forEach(key => {
+        modePanels[key].style.display = key === mode ? "block" : "none";
       });
+
+      if (mode !== "camera") stopCamera();
     });
+  });
 
-    // Camera
-    async function startCamera() {
-      try {
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-          cameraStatusText.textContent = "Camera not supported.";
-          return;
-        }
-        cameraStream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment" }
-        });
-        video.srcObject = cameraStream;
-        analyzeCameraBtn.disabled = false;
-        cameraStatusText.textContent = "Camera active";
-        toggleCameraBtn.textContent = "⏹ Stop camera";
-      } catch (err) {
-        console.error(err);
-        cameraStatusText.textContent = "Permission denied or no camera.";
-      }
-    }
-
-    function stopCamera() {
-      if (cameraStream) {
-        cameraStream.getTracks().forEach(t => t.stop());
-        cameraStream = null;
-      }
-      video.srcObject = null;
-      analyzeCameraBtn.disabled = true;
-      cameraPreview.style.display = "none";
-      cameraStatusText.textContent = "Camera stopped";
-      toggleCameraBtn.textContent = "▶ Start camera";
-    }
-
-    toggleCameraBtn.addEventListener("click", () => {
-      if (cameraStream) stopCamera();
-      else startCamera();
-    });
-
-    analyzeCameraBtn.addEventListener("click", async () => {
-      if (!cameraStream || analyzing) return;
-      const w = video.videoWidth || 640;
-      const h = video.videoHeight || 480;
-      canvas.width = w;
-      canvas.height = h;
-      const ctx = canvas.getContext("2d");
-      ctx.drawImage(video, 0, 0, w, h);
-      const dataURL = canvas.toDataURL("image/jpeg", 0.85);
-
-      cameraPreview.src = dataURL;
-      cameraPreview.style.display = "block";
-      cameraStatusText.textContent = "Frame captured – analyzing…";
-      video.pause();
-      cameraLoader.style.display = "block";
-
-      await analyzeWithBackend({ image: dataURL, queryText: "" });
-
-      if (cameraStream) {
-        cameraPreview.style.display = "none";
-        cameraStatusText.textContent = "Camera active";
-        video.play();
-      }
-      cameraLoader.style.display = "none";
-    });
-
-    // Upload
-    uploadDropzone.addEventListener("click", () => fileInput.click());
-
-    fileInput.addEventListener("change", e => {
-      const file = e.target.files && e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = evt => {
-        const dataURL = evt.target.result;
-        showUploadPreview(dataURL);
-      };
-      reader.readAsDataURL(file);
-    });
-
-    uploadDropzone.addEventListener("dragover", e => {
-      e.preventDefault();
-      uploadDropzone.classList.add("dragover");
-    });
-
-    uploadDropzone.addEventListener("dragleave", e => {
-      e.preventDefault();
-      uploadDropzone.classList.remove("dragover");
-    });
-
-    uploadDropzone.addEventListener("drop", e => {
-      e.preventDefault();
-      uploadDropzone.classList.remove("dragover");
-      const file = e.dataTransfer.files && e.dataTransfer.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = evt => {
-        const dataURL = evt.target.result;
-        showUploadPreview(dataURL);
-      };
-      reader.readAsDataURL(file);
-    });
-
-    function showUploadPreview(dataURL) {
-      uploadPreview.src = dataURL;
-      uploadPreview.style.display = "block";
-      uploadPrompt.style.display = "none";
-      analyzeUploadBtn.disabled = false;
-      analyzeUploadBtn.onclick = async () => {
-        await analyzeWithBackend({ image: dataURL, queryText: "" });
-      };
-    }
-
-    // Manual search
-    manualSearchBtn.addEventListener("click", () => {
-      const text = manualInput.value.trim();
-      if (!text || analyzing) return;
-      analyzeWithBackend({ image: null, queryText: text });
-    });
-
-    manualInput.addEventListener("keypress", e => {
-      if (e.key === "Enter") manualSearchBtn.click();
-    });
-
-    async function analyzeWithBackend(payload) {
-      analyzing = true;
-      globalLoader.style.display = "inline-block";
-      aiStatusText.textContent = "Analyzing component…";
-
-      try {
-        const res = await fetch("/api/electro-lookup", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        });
-
-        if (!res.ok) throw new Error("Backend error");
-        const data = await res.json();
-        renderResult(data, payload.queryText || "");
-        aiStatusText.textContent = "Done – analyze another item if you like.";
-      } catch (err) {
-        console.error(err);
-        aiStatusText.textContent = "Error – check console or API configuration.";
-        descriptionEl.innerHTML =
-          '<p class="placeholder">Failed to analyze. Please verify your Gemini, Groq, and Google API keys.</p>';
-      } finally {
-        analyzing = false;
-        globalLoader.style.display = "none";
-        cameraLoader.style.display = "none";
-      }
-    }
-
-    function renderList(el, arr, emptyText) {
-      el.innerHTML = "";
-      if (!Array.isArray(arr) || arr.length === 0) {
-        el.innerHTML = `<p class="placeholder">${emptyText}</p>`;
+  // Camera
+  async function startCamera() {
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        cameraStatusText.textContent = "Camera not supported.";
         return;
       }
-      const ul = document.createElement("ul");
-      arr.forEach(item => {
-        const li = document.createElement("li");
-        li.textContent = item;
-        ul.appendChild(li);
+      cameraStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" }
       });
-      el.appendChild(ul);
+      video.srcObject = cameraStream;
+      analyzeCameraBtn.disabled = false;
+      cameraStatusText.textContent = "Camera active";
+      toggleCameraBtn.textContent = "⏹ Stop camera";
+    } catch (err) {
+      console.error(err);
+      cameraStatusText.textContent = "Permission denied or no camera.";
     }
+  }
 
-    function renderResult(r, queryText) {
-      deviceNameEl.textContent = r.name || queryText || "Unknown device";
-      deviceCategoryEl.textContent = r.category || "Other";
-
-      descriptionEl.innerHTML = "";
-      const p = document.createElement("p");
-      p.textContent = r.description || "No description available.";
-      descriptionEl.appendChild(p);
-
-      renderList(typicalUsesEl, r.typical_uses, "No typical uses listed.");
-      renderList(whereToBuyEl, r.where_to_buy, "No buying sources listed.");
-      renderList(keySpecsEl, r.key_specs, "No key specs listed.");
-      renderList(projectIdeasEl, r.project_ideas, "No project ideas listed.");
-      renderList(commonMistakesEl, r.common_mistakes, "No common mistakes listed.");
-
-      datasheetHintEl.innerHTML = "";
-      const dh = document.createElement("p");
-      dh.textContent =
-        r.datasheet_hint ||
-        "Search for the device name + 'datasheet' in your browser.";
-      datasheetHintEl.appendChild(dh);
-
-      referencesEl.innerHTML = "";
-      let hasRefs = false;
-
-      if (r.datasheet_url) {
-        const a = document.createElement("a");
-        a.href = r.datasheet_url;
-        a.target = "_blank";
-        a.rel = "noopener noreferrer";
-        a.className = "shop-btn";
-        a.textContent = "📄 Open datasheet";
-        referencesEl.appendChild(a);
-        hasRefs = true;
-      }
-
-      if (Array.isArray(r.references) && r.references.length > 0) {
-        r.references.forEach(ref => {
-          const wrapper = document.createElement("p");
-          const link = document.createElement("a");
-          link.href = ref.url;
-          link.target = "_blank";
-          link.rel = "noopener noreferrer";
-          link.className = "ref-link";
-          link.textContent = ref.title || ref.url;
-          wrapper.appendChild(link);
-          if (ref.snippet) {
-            const sn = document.createElement("div");
-            sn.className = "ref-snippet";
-            sn.textContent = ref.snippet;
-            wrapper.appendChild(sn);
-          }
-          referencesEl.appendChild(wrapper);
-          hasRefs = true;
-        });
-      }
-
-      if (!hasRefs) {
-        referencesEl.innerHTML =
-          '<p class="placeholder">No external references found.</p>';
-      }
-
-      shopLinksEl.innerHTML = "";
-      if (r.shop_links) {
-        if (r.shop_links.shopee) {
-          shopLinksEl.innerHTML += `<a class="shop-btn" href="${r.shop_links.shopee}" target="_blank">Shopee</a>`;
-        }
-        if (r.shop_links.lazada) {
-          shopLinksEl.innerHTML += `<a class="shop-btn" href="${r.shop_links.lazada}" target="_blank">Lazada</a>`;
-        }
-        if (r.shop_links.amazon) {
-          shopLinksEl.innerHTML += `<a class="shop-btn" href="${r.shop_links.amazon}" target="_blank">Amazon</a>`;
-        }
-        if (r.shop_links.aliexpress) {
-          shopLinksEl.innerHTML += `<a class="shop-btn" href="${r.shop_links.aliexpress}" target="_blank">AliExpress</a>`;
-        }
-      }
-      if (r.official_store) {
-        shopLinksEl.innerHTML += `<a class="shop-btn" href="${r.official_store}" target="_blank">Official store</a>`;
-      }
-      if (!shopLinksEl.innerHTML.trim()) {
-        shopLinksEl.innerHTML =
-          '<span class="placeholder">No online shop links generated.</span>';
-      }
-
-      if (r.real_image) {
-        refImageEl.src = r.real_image;
-        refImageEl.style.display = "block";
-      } else {
-        refImageEl.style.display = "none";
-      }
-
-      if (r.usage_image) {
-        usageImageEl.src = r.usage_image;
-        usageImageEl.style.display = "block";
-      } else {
-        usageImageEl.style.display = "none";
-      }
-
-      if (r.pinout_image) {
-        pinoutImageEl.src = r.pinout_image;
-        pinoutImageEl.style.display = "block";
-      } else {
-        pinoutImageEl.style.display = "none";
-      }
+  function stopCamera() {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(t => t.stop());
+      cameraStream = null;
     }
+    video.srcObject = null;
+    analyzeCameraBtn.disabled = true;
+    cameraPreview.style.display = "none";
+    cameraStatusText.textContent = "Camera stopped";
+    toggleCameraBtn.textContent = "▶ Start camera";
+  }
 
-    window.addEventListener("load", () => {
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        cameraStatusText.textContent = "Requesting camera access…";
-        startCamera();
-      } else {
-        cameraStatusText.textContent = "Camera not supported on this device.";
+  toggleCameraBtn.addEventListener("click", () => {
+    if (cameraStream) stopCamera();
+    else startCamera();
+  });
+
+  analyzeCameraBtn.addEventListener("click", async () => {
+    if (!cameraStream || analyzing) return;
+    const w = video.videoWidth || 640;
+    const h = video.videoHeight || 480;
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(video, 0, 0, w, h);
+    const dataURL = canvas.toDataURL("image/jpeg", 0.85);
+
+    cameraPreview.src = dataURL;
+    cameraPreview.style.display = "block";
+    cameraStatusText.textContent = "Frame captured – analyzing…";
+    video.pause();
+    cameraLoader.style.display = "block";
+
+    await analyzeWithBackend({ image: dataURL, queryText: "" });
+
+    if (cameraStream) {
+      cameraPreview.style.display = "none";
+      cameraStatusText.textContent = "Camera active";
+      video.play();
+    }
+    cameraLoader.style.display = "none";
+  });
+
+  // Upload
+  uploadDropzone.addEventListener("click", () => fileInput.click());
+
+  fileInput.addEventListener("change", e => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = evt => {
+      const dataURL = evt.target.result;
+      showUploadPreview(dataURL);
+    };
+    reader.readAsDataURL(file);
+  });
+
+  uploadDropzone.addEventListener("dragover", e => {
+    e.preventDefault();
+    uploadDropzone.classList.add("dragover");
+  });
+
+  uploadDropzone.addEventListener("dragleave", e => {
+    e.preventDefault();
+    uploadDropzone.classList.remove("dragover");
+  });
+
+  uploadDropzone.addEventListener("drop", e => {
+    e.preventDefault();
+    uploadDropzone.classList.remove("dragover");
+    const file = e.dataTransfer.files && e.dataTransfer.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = evt => {
+      const dataURL = evt.target.result;
+      showUploadPreview(dataURL);
+    };
+    reader.readAsDataURL(file);
+  });
+
+  function showUploadPreview(dataURL) {
+    uploadPreview.src = dataURL;
+    uploadPreview.style.display = "block";
+    uploadPrompt.style.display = "none";
+    analyzeUploadBtn.disabled = false;
+    analyzeUploadBtn.onclick = async () => {
+      await analyzeWithBackend({ image: dataURL, queryText: "" });
+    };
+  }
+
+  // Manual search
+  manualSearchBtn.addEventListener("click", () => {
+    const text = manualInput.value.trim();
+    if (!text || analyzing) return;
+    analyzeWithBackend({ image: null, queryText: text });
+  });
+
+  manualInput.addEventListener("keypress", e => {
+    if (e.key === "Enter") manualSearchBtn.click();
+  });
+
+  // ===== UPDATED analyzeWithBackend with quota display =====
+  async function analyzeWithBackend(payload) {
+    analyzing = true;
+    globalLoader.style.display = "inline-block";
+    aiStatusText.textContent = "Analyzing component…";
+
+    try {
+      const res = await fetch("/api/electro-lookup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      let data = null;
+      try {
+        data = await res.json();
+      } catch (parseErr) {
+        console.error("Failed to parse JSON from backend:", parseErr);
       }
+
+      const quotaWarnings =
+        data && data.meta && Array.isArray(data.meta.quotaWarnings)
+          ? data.meta.quotaWarnings
+          : [];
+
+      // If backend returned an error (4xx/5xx), show the exact reason + quota info
+      if (!res.ok || !data) {
+        const baseError = (data && (data.error || data.message)) || "Backend error.";
+        const detailsText = data && data.details ? ` (${data.details})` : "";
+
+        const quotaText = quotaWarnings.length
+          ? " | API quota notice: " +
+            quotaWarnings
+              .map(q => `${q.source}: ${q.message}`)
+              .join(" · ")
+          : "";
+
+        aiStatusText.textContent = `${baseError}${detailsText}${quotaText}`;
+
+        descriptionEl.innerHTML =
+          '<p class="placeholder">Analysis failed. This is often caused by API quota limits (e.g. Gemini, Groq, Google Custom Search, Serper). Try again later or check the API dashboards.</p>';
+        return;
+      }
+
+      // Backend OK: render encyclopedia content
+      renderResult(data, payload.queryText || "");
+
+      // If some APIs are hitting quota but we still got a result, show a softer warning
+      if (quotaWarnings.length) {
+        const quotaText = quotaWarnings
+          .map(q => `${q.source}: ${q.message}`)
+          .join(" · ");
+        aiStatusText.textContent =
+          "Done – but some APIs reported quota issues: " + quotaText;
+      } else {
+        aiStatusText.textContent = "Done – analyze another item if you like.";
+      }
+    } catch (err) {
+      console.error(err);
+      aiStatusText.textContent =
+        "Error – check console or API configuration (Gemini / Groq / Google / Serper).";
+      descriptionEl.innerHTML =
+        '<p class="placeholder">Failed to analyze. Please verify your Gemini, Groq, Google CSE, and Serper API keys and quotas.</p>';
+    } finally {
+      analyzing = false;
+      globalLoader.style.display = "none";
+      cameraLoader.style.display = "none";
+    }
+  }
+
+  function renderList(el, arr, emptyText) {
+    el.innerHTML = "";
+    if (!Array.isArray(arr) || arr.length === 0) {
+      el.innerHTML = `<p class="placeholder">${emptyText}</p>`;
+      return;
+    }
+    const ul = document.createElement("ul");
+    arr.forEach(item => {
+      const li = document.createElement("li");
+      li.textContent = item;
+      ul.appendChild(li);
     });
-  </script>
+    el.appendChild(ul);
+  }
+
+  function renderResult(r, queryText) {
+    deviceNameEl.textContent = r.name || queryText || "Unknown device";
+    deviceCategoryEl.textContent = r.category || "Other";
+
+    descriptionEl.innerHTML = "";
+    const p = document.createElement("p");
+    p.textContent = r.description || "No description available.";
+    descriptionEl.appendChild(p);
+
+    renderList(typicalUsesEl, r.typical_uses, "No typical uses listed.");
+    renderList(whereToBuyEl, r.where_to_buy, "No buying sources listed.");
+    renderList(keySpecsEl, r.key_specs, "No key specs listed.");
+    renderList(projectIdeasEl, r.project_ideas, "No project ideas listed.");
+    renderList(commonMistakesEl, r.common_mistakes, "No common mistakes listed.");
+
+    datasheetHintEl.innerHTML = "";
+    const dh = document.createElement("p");
+    dh.textContent =
+      r.datasheet_hint ||
+      "Search for the device name + 'datasheet' in your browser.";
+    datasheetHintEl.appendChild(dh);
+
+    referencesEl.innerHTML = "";
+    let hasRefs = false;
+
+    if (r.datasheet_url) {
+      const a = document.createElement("a");
+      a.href = r.datasheet_url;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      a.className = "shop-btn";
+      a.textContent = "📄 Open datasheet";
+      referencesEl.appendChild(a);
+      hasRefs = true;
+    }
+
+    if (Array.isArray(r.references) && r.references.length > 0) {
+      r.references.forEach(ref => {
+        const wrapper = document.createElement("p");
+        const link = document.createElement("a");
+        link.href = ref.url;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.className = "ref-link";
+        link.textContent = ref.title || ref.url;
+        wrapper.appendChild(link);
+        if (ref.snippet) {
+          const sn = document.createElement("div");
+          sn.className = "ref-snippet";
+          sn.textContent = ref.snippet;
+          wrapper.appendChild(sn);
+        }
+        referencesEl.appendChild(wrapper);
+        hasRefs = true;
+      });
+    }
+
+    if (!hasRefs) {
+      referencesEl.innerHTML =
+        '<p class="placeholder">No external references found.</p>';
+    }
+
+    shopLinksEl.innerHTML = "";
+    if (r.shop_links) {
+      if (r.shop_links.shopee) {
+        shopLinksEl.innerHTML += `<a class="shop-btn" href="${r.shop_links.shopee}" target="_blank">Shopee</a>`;
+      }
+      if (r.shop_links.lazada) {
+        shopLinksEl.innerHTML += `<a class="shop-btn" href="${r.shop_links.lazada}" target="_blank">Lazada</a>`;
+      }
+      if (r.shop_links.amazon) {
+        shopLinksEl.innerHTML += `<a class="shop-btn" href="${r.shop_links.amazon}" target="_blank">Amazon</a>`;
+      }
+      if (r.shop_links.aliexpress) {
+        shopLinksEl.innerHTML += `<a class="shop-btn" href="${r.shop_links.aliexpress}" target="_blank">AliExpress</a>`;
+      }
+    }
+    if (r.official_store) {
+      shopLinksEl.innerHTML += `<a class="shop-btn" href="${r.official_store}" target="_blank">Official store</a>`;
+    }
+    if (!shopLinksEl.innerHTML.trim()) {
+      shopLinksEl.innerHTML =
+        '<span class="placeholder">No online shop links generated.</span>';
+    }
+
+    if (r.real_image) {
+      refImageEl.src = r.real_image;
+      refImageEl.style.display = "block";
+    } else {
+      refImageEl.style.display = "none";
+    }
+
+    if (r.usage_image) {
+      usageImageEl.src = r.usage_image;
+      usageImageEl.style.display = "block";
+    } else {
+      usageImageEl.style.display = "none";
+    }
+
+    if (r.pinout_image) {
+      pinoutImageEl.src = r.pinout_image;
+      pinoutImageEl.style.display = "block";
+    } else {
+      pinoutImageEl.style.display = "none";
+    }
+  }
+
+  window.addEventListener("load", () => {
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      cameraStatusText.textContent = "Requesting camera access…";
+      startCamera();
+    } else {
+      cameraStatusText.textContent = "Camera not supported on this device.";
+    }
+  });
+</script>
+
 </body>
 </html>

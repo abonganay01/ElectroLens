@@ -1,21 +1,19 @@
-// /pages/api/electro-lookup.js (Next.js API route)
+// api/electro-lookup.js
 
-// Uses Node runtime (NOT Edge)
+// Uses Node runtime (Vercel serverless / Node, NOT Edge)
 import { GoogleGenerativeAI } from "@google/generative-ai";
-// ❌ REMOVE this, we will use the built-in fetch:
-// import fetch from "node-fetch";
 
 // ---------------------------------------------------------
-// Next.js API config: disable built-in bodyParser so we can
-// manually read large JSON bodies (for base64 images).
+// Vercel / Next API config: disable automatic body parsing
+// so we can manually read large base64 JSON bodies.
 // ---------------------------------------------------------
 export const config = {
   api: {
-    bodyParser: false, // IMPORTANT: we use readJsonBody instead
+    bodyParser: false,
   },
 };
 
-// (optional but nice to be explicit in app+pages hybrid projects)
+// (optional, but helps in Next hybrids)
 export const runtime = "nodejs";
 
 // ========== Helpers: request body + image parsing ==========
@@ -59,9 +57,14 @@ function extractBase64FromDataUrl(dataUrl) {
   return { mimeType: match[1], base64: match[2] };
 }
 
+// Small helper to detect quota-ish HTTP statuses
+function isQuotaStatus(status) {
+  return status === 429 || status === 402 || status === 403;
+}
+
 // ========== Google Custom Search helpers ==========
 
-async function googleImageSearch(query) {
+async function googleImageSearch(query, quotaWarnings = []) {
   const apiKey = process.env.CSE_API_KEY;
   const cx = process.env.CSE_CX;
   if (!apiKey || !cx || !query) return null;
@@ -74,6 +77,13 @@ async function googleImageSearch(query) {
     const res = await fetch(url);
     if (!res.ok) {
       console.error("Image search HTTP error (Google):", res.status);
+      if (isQuotaStatus(res.status)) {
+        quotaWarnings.push({
+          source: "google_cse_images",
+          status: res.status,
+          message: "Google Custom Search image quota or billing limit reached.",
+        });
+      }
       return null;
     }
     const data = await res.json();
@@ -87,7 +97,7 @@ async function googleImageSearch(query) {
 // ========== Serper API helpers (fallback, no DuckDuckGo) ==========
 // Docs: https://serper.dev
 
-async function serperImageSearch(query) {
+async function serperImageSearch(query, quotaWarnings = []) {
   const serperKey = process.env.SERPER_API_KEY;
   if (!serperKey || !query) return null;
 
@@ -106,6 +116,13 @@ async function serperImageSearch(query) {
 
     if (!res.ok) {
       console.error("Serper image search HTTP error:", res.status);
+      if (isQuotaStatus(res.status)) {
+        quotaWarnings.push({
+          source: "serper_images",
+          status: res.status,
+          message: "Serper image search quota or billing limit reached.",
+        });
+      }
       return null;
     }
 
@@ -120,7 +137,7 @@ async function serperImageSearch(query) {
   }
 }
 
-async function serperDatasheetSearch(query) {
+async function serperDatasheetSearch(query, quotaWarnings = []) {
   const serperKey = process.env.SERPER_API_KEY;
   if (!serperKey || !query) {
     return { datasheetUrl: null, references: [] };
@@ -141,6 +158,13 @@ async function serperDatasheetSearch(query) {
 
     if (!res.ok) {
       console.error("Serper datasheet search HTTP error:", res.status);
+      if (isQuotaStatus(res.status)) {
+        quotaWarnings.push({
+          source: "serper_search",
+          status: res.status,
+          message: "Serper search quota or billing limit reached.",
+        });
+      }
       return { datasheetUrl: null, references: [] };
     }
 
@@ -175,40 +199,40 @@ async function serperDatasheetSearch(query) {
 }
 
 // unified helper: Google first, then Serper
-async function smartImageSearch(query) {
+async function smartImageSearch(query, quotaWarnings = []) {
   if (!query) return null;
 
   // Try Google CSE first
-  let url = await googleImageSearch(query);
+  let url = await googleImageSearch(query, quotaWarnings);
   if (url) return url;
 
   console.warn(
     "Google image search failed or quota exceeded – falling back to Serper."
   );
-  url = await serperImageSearch(query);
+  url = await serperImageSearch(query, quotaWarnings);
   return url || null;
 }
 
 // Wrappers that keep your original function names
-async function fetchRealImageFromGoogle(nameOrQuery) {
-  return smartImageSearch(nameOrQuery);
+async function fetchRealImageFromGoogle(nameOrQuery, quotaWarnings = []) {
+  return smartImageSearch(nameOrQuery, quotaWarnings);
 }
 
-async function fetchUsageImageFromGoogle(nameOrQuery) {
+async function fetchUsageImageFromGoogle(nameOrQuery, quotaWarnings = []) {
   // try to get an application / example circuit image
   const q = `${nameOrQuery} application circuit electronics example`;
-  return smartImageSearch(q);
+  return smartImageSearch(q, quotaWarnings);
 }
 
-async function fetchPinoutImageFromGoogle(nameOrQuery) {
+async function fetchPinoutImageFromGoogle(nameOrQuery, quotaWarnings = []) {
   // try to get a pinout diagram
   const q = `${nameOrQuery} pinout diagram`;
-  return smartImageSearch(q);
+  return smartImageSearch(q, quotaWarnings);
 }
 
 // ---------- Datasheets & references: Google first, Serper fallback ----------
 
-async function googleDatasheetAndReferences(name) {
+async function googleDatasheetAndReferences(name, quotaWarnings = []) {
   const apiKey = process.env.CSE_API_KEY;
   const cx = process.env.CSE_CX;
   if (!apiKey || !cx || !name) return { datasheetUrl: null, references: [] };
@@ -221,7 +245,14 @@ async function googleDatasheetAndReferences(name) {
   try {
     const res = await fetch(url);
     if (!res.ok) {
-      console.error("Datasheet search HTTP error:", res.status);
+      console.error("Datasheet search HTTP error (Google):", res.status);
+      if (isQuotaStatus(res.status)) {
+        quotaWarnings.push({
+          source: "google_cse_search",
+          status: res.status,
+          message: "Google Custom Search quota or billing limit reached.",
+        });
+      }
       return { datasheetUrl: null, references: [] };
     }
     const data = await res.json();
@@ -253,11 +284,14 @@ async function googleDatasheetAndReferences(name) {
   }
 }
 
-async function fetchDatasheetAndReferences(name) {
+async function fetchDatasheetAndReferences(name, quotaWarnings = []) {
   if (!name) return { datasheetUrl: null, references: [] };
 
   // 1) Google CSE
-  let { datasheetUrl, references } = await googleDatasheetAndReferences(name);
+  let { datasheetUrl, references } = await googleDatasheetAndReferences(
+    name,
+    quotaWarnings
+  );
 
   const needsFallback =
     !datasheetUrl || !Array.isArray(references) || references.length === 0;
@@ -271,7 +305,7 @@ async function fetchDatasheetAndReferences(name) {
   );
 
   // 2) Serper fallback
-  const serperResult = await serperDatasheetSearch(name);
+  const serperResult = await serperDatasheetSearch(name, quotaWarnings);
 
   if (!datasheetUrl && serperResult.datasheetUrl) {
     datasheetUrl = serperResult.datasheetUrl;
@@ -298,7 +332,7 @@ function generateShopLinks(nameOrQuery) {
 
 // ========== Groq refinement: make it a real encyclopedia ==========
 
-async function groqRefine(baseJson) {
+async function groqRefine(baseJson, quotaWarnings = []) {
   const groqKey = process.env.GROQ_API_KEY;
   if (!groqKey) {
     console.log("⚠️ No GROQ_API_KEY → skipping Groq refinement.");
@@ -355,17 +389,6 @@ For each field:
 
 - "datasheet_hint":
   • Give ONE realistic search string the user can paste into Google to find the official datasheet.
-  • Example: "ESP32-WROOM-32 datasheet PDF espressif" or "LM7805 TO-220 voltage regulator datasheet".
-
-Image-related keys:
-- "real_image", "usage_image", "pinout_image", "datasheet_url", "shop_links", "references":
-  • DO NOT modify or overwrite URLs. They are provided by the server.
-  • You may assume they are valid links to images or pages.
-
-- "official_store":
-  • If you recognize a likely manufacturer (Espressif, Texas Instruments, STMicroelectronics, etc.),
-    you may set or refine this as their main official website or product page URL.
-  • If you are not sure, leave it as is.
 
 GENERAL:
 - Do not contradict clear information already in the JSON.
@@ -393,6 +416,13 @@ GENERAL:
 
     if (!res.ok) {
       console.error("Groq HTTP error:", res.status, await res.text());
+      if (isQuotaStatus(res.status)) {
+        quotaWarnings.push({
+          source: "groq_refine",
+          status: res.status,
+          message: "Groq refinement quota or billing limit reached.",
+        });
+      }
       return baseJson;
     }
 
@@ -410,6 +440,79 @@ GENERAL:
   }
 }
 
+// ========== Groq text-only fallback when Gemini is out of quota ==========
+
+async function groqDescribeFromText(queryText, quotaWarnings = []) {
+  const groqKey = process.env.GROQ_API_KEY;
+  if (!groqKey) {
+    throw new Error(
+      "Gemini quota exceeded and no GROQ_API_KEY is configured for text-only fallback."
+    );
+  }
+
+  const systemPrompt = `
+You are ElectroLens, an assistant specialized ONLY in electronics-related items.
+
+Return STRICT JSON ONLY in this shape:
+
+{
+  "name": "",
+  "category": "",
+  "description": "",
+  "typical_uses": [],
+  "where_to_buy": [],
+  "key_specs": [],
+  "datasheet_hint": "",
+  "project_ideas": [],
+  "common_mistakes": [],
+  "image_search_query": ""
+}
+
+- "category": one of "Component", "Microcontroller", "Module", "Tool", "Test Equipment", "Power Supply", "Other".
+- Do NOT include any extra fields or text outside the JSON.
+`;
+
+  const body = {
+    model: "mixtral-8x7b-32768",
+    messages: [
+      { role: "system", content: systemPrompt },
+      {
+        role: "user",
+        content: `User typed query describing an electronics item: "${queryText}". Infer the most likely component/module/tool and fill the JSON.`,
+      },
+    ],
+  };
+
+  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${groqKey}`,
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    console.error("Groq text fallback HTTP error:", res.status, await res.text());
+    if (isQuotaStatus(res.status)) {
+      quotaWarnings.push({
+        source: "groq_text_fallback",
+        status: res.status,
+        message: "Groq text-only fallback quota or billing limit reached.",
+      });
+    }
+    throw new Error(`Groq text fallback HTTP error: ${res.status}`);
+  }
+
+  const data = await res.json();
+  const text = data?.choices?.[0]?.message?.content;
+  if (!text) {
+    throw new Error("Groq text fallback returned empty content.");
+  }
+
+  return JSON.parse(text);
+}
+
 // ========== Main handler ==========
 
 export default async function handler(req, res) {
@@ -417,6 +520,9 @@ export default async function handler(req, res) {
     res.setHeader("Allow", "POST");
     return res.status(405).json({ error: "Method not allowed" });
   }
+
+  // Collect quota-related warnings here and return in meta.quotaWarnings
+  const quotaWarnings = [];
 
   try {
     const body = await readJsonBody(req); // works for camera, upload, and type search
@@ -426,14 +532,22 @@ export default async function handler(req, res) {
     const safeQueryText = rawQueryText.trim();
 
     if (!image && !safeQueryText) {
-      return res.status(400).json({ error: "Provide an image or queryText." });
+      return res
+        .status(400)
+        .json({ error: "Provide an image or queryText.", meta: { quotaWarnings } });
     }
 
     const geminiKey = process.env.GOOGLE_API_KEY;
     if (!geminiKey) {
       console.error("Missing GOOGLE_API_KEY");
+      quotaWarnings.push({
+        source: "gemini",
+        status: 500,
+        message: "GOOGLE_API_KEY is missing on the server.",
+      });
       return res.status(500).json({
         error: "Server misconfigured: GOOGLE_API_KEY missing.",
+        meta: { quotaWarnings },
       });
     }
 
@@ -488,6 +602,7 @@ Return STRICT JSON ONLY in this shape:
         return res.status(400).json({
           error:
             "Image must be a base64 data URL like data:image/jpeg;base64,...",
+          meta: { quotaWarnings },
         });
       }
       parts.push({
@@ -503,23 +618,72 @@ Return STRICT JSON ONLY in this shape:
       parts.push({ text: `User typed query: "${safeQueryText}"` });
     }
 
-    const geminiResp = await model.generateContent({
-      contents: [{ role: "user", parts }],
-      generationConfig: { responseMimeType: "application/json" },
-    });
-
     let baseJson;
+
+    // --- Gemini call with quota-aware handling ---
     try {
+      const geminiResp = await model.generateContent({
+        contents: [{ role: "user", parts }],
+        generationConfig: { responseMimeType: "application/json" },
+      });
+
       const rawText = geminiResp.response.text();
       baseJson = JSON.parse(rawText);
     } catch (err) {
-      console.error(
-        "Failed to parse Gemini JSON:",
-        geminiResp?.response?.text?.() || geminiResp
-      );
-      return res
-        .status(500)
-        .json({ error: "Failed to parse Gemini response as JSON." });
+      const msg = String(err || "");
+      const isQuotaError =
+        msg.includes("429") ||
+        msg.includes("You exceeded your current quota") ||
+        msg.includes("Quota exceeded for metric");
+
+      if (isQuotaError) {
+        console.error("Gemini quota exceeded. Raw error:", msg);
+        quotaWarnings.push({
+          source: "gemini",
+          status: 429,
+          message:
+            "Gemini free-tier quota exceeded for model gemini-2.5-flash. Image-based analysis may be unavailable.",
+        });
+
+        // If it's a TEXT-only query (manual mode), try Groq fallback
+        if (!image && safeQueryText) {
+          try {
+            console.log(
+              "Using Groq text-only fallback because Gemini quota is exhausted."
+            );
+            baseJson = await groqDescribeFromText(
+              safeQueryText,
+              quotaWarnings
+            );
+          } catch (fallbackErr) {
+            console.error("Groq text fallback also failed:", fallbackErr);
+            return res.status(429).json({
+              error:
+                "Gemini quota exceeded and Groq text fallback failed. Try again later or update API keys/quotas.",
+              details:
+                fallbackErr.message ||
+                "Check GROQ_API_KEY or try again later when quotas reset.",
+              meta: { quotaWarnings },
+            });
+          }
+        } else {
+          // Image-based modes can't work without a vision model
+          return res.status(429).json({
+            error: "Gemini vision quota exceeded.",
+            details:
+              "Camera and upload analysis require Gemini (vision). Your free-tier Gemini quota is used up. Try again after the quota resets or upgrade your Gemini plan.",
+            meta: { quotaWarnings },
+          });
+        }
+      } else {
+        // Some other Gemini error
+        console.error("Gemini error:", err);
+        return res.status(500).json({
+          error: "Failed to call Gemini generateContent.",
+          details: msg,
+          meta: { quotaWarnings },
+        });
+      }
     }
 
     const nameOrQuery =
@@ -529,13 +693,23 @@ Return STRICT JSON ONLY in this shape:
       "electronics component";
 
     // Images (Google first, Serper fallback)
-    baseJson.real_image = await fetchRealImageFromGoogle(nameOrQuery);
-    baseJson.usage_image = await fetchUsageImageFromGoogle(nameOrQuery);
-    baseJson.pinout_image = await fetchPinoutImageFromGoogle(nameOrQuery);
+    baseJson.real_image = await fetchRealImageFromGoogle(
+      nameOrQuery,
+      quotaWarnings
+    );
+    baseJson.usage_image = await fetchUsageImageFromGoogle(
+      nameOrQuery,
+      quotaWarnings
+    );
+    baseJson.pinout_image = await fetchPinoutImageFromGoogle(
+      nameOrQuery,
+      quotaWarnings
+    );
 
     // Datasheet + references (Google first, Serper fallback)
     const ds = await fetchDatasheetAndReferences(
-      baseJson.name || safeQueryText || ""
+      baseJson.name || safeQueryText || "",
+      quotaWarnings
     );
     baseJson.datasheet_url = ds.datasheetUrl;
     baseJson.references = ds.references;
@@ -546,7 +720,7 @@ Return STRICT JSON ONLY in this shape:
     );
 
     // Let Groq turn it into a full-blown encyclopedia entry
-    const refined = await groqRefine(baseJson);
+    const refined = await groqRefine(baseJson, quotaWarnings);
 
     // Preserve server-generated URLs & links even if Groq drops them
     const finalJson = {
@@ -557,6 +731,9 @@ Return STRICT JSON ONLY in this shape:
       datasheet_url: baseJson.datasheet_url,
       references: baseJson.references,
       shop_links: baseJson.shop_links,
+      meta: {
+        quotaWarnings,
+      },
     };
 
     if (baseJson.official_store && !finalJson.official_store) {
@@ -569,6 +746,7 @@ Return STRICT JSON ONLY in this shape:
     return res.status(500).json({
       error: "Internal server error in electro-lookup.",
       details: err.message || String(err),
+      meta: { quotaWarnings },
     });
   }
 }
