@@ -444,10 +444,36 @@ GENERAL:
 
 async function groqDescribeFromText(queryText, quotaWarnings = []) {
   const groqKey = process.env.GROQ_API_KEY;
+  const safeName = queryText || "Unknown electronics item";
+
+  // Base fallback JSON that we can always return
+  const fallbackJson = {
+    name: safeName,
+    category: "Other",
+    description:
+      "Text-only fallback entry. The primary Gemini model was unavailable (quota or billing) " +
+      "and Groq could not be used reliably, so this is a minimal placeholder. " +
+      "Use the datasheet and external links for exact specifications.",
+    typical_uses: [],
+    where_to_buy: [],
+    key_specs: [],
+    datasheet_hint: safeName
+      ? `${safeName} datasheet pdf`
+      : "electronics component datasheet pdf",
+    project_ideas: [],
+    common_mistakes: [],
+    image_search_query: safeName || "electronics component",
+  };
+
+  // If there is no Groq API key, just return the fallback JSON
   if (!groqKey) {
-    throw new Error(
-      "Gemini quota exceeded and no GROQ_API_KEY is configured for text-only fallback."
-    );
+    quotaWarnings.push({
+      source: "groq_text_fallback",
+      status: 500,
+      message:
+        "GROQ_API_KEY not set. Using simple text-only fallback for manual search.",
+    });
+    return fallbackJson;
   }
 
   const systemPrompt = `
@@ -483,34 +509,64 @@ Return STRICT JSON ONLY in this shape:
     ],
   };
 
-  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${groqKey}`,
-    },
-    body: JSON.stringify(body),
-  });
+  try {
+    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${groqKey}`,
+      },
+      body: JSON.stringify(body),
+    });
 
-  if (!res.ok) {
-    console.error("Groq text fallback HTTP error:", res.status, await res.text());
-    if (isQuotaStatus(res.status)) {
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error("Groq text fallback HTTP error:", res.status, errText);
+      if (isQuotaStatus(res.status)) {
+        quotaWarnings.push({
+          source: "groq_text_fallback",
+          status: res.status,
+          message:
+            "Groq text-only fallback quota or billing limit reached. Using simple fallback instead.",
+        });
+      } else {
+        quotaWarnings.push({
+          source: "groq_text_fallback",
+          status: res.status,
+          message:
+            "Groq text-only fallback returned HTTP " +
+            res.status +
+            ". Using simple fallback instead.",
+        });
+      }
+      // Do NOT throw → return minimal fallback
+      return fallbackJson;
+    }
+
+    const data = await res.json();
+    const text = data?.choices?.[0]?.message?.content;
+    if (!text) {
+      console.error("Groq text fallback returned empty content.");
       quotaWarnings.push({
         source: "groq_text_fallback",
-        status: res.status,
-        message: "Groq text-only fallback quota or billing limit reached.",
+        status: 500,
+        message:
+          "Groq text fallback returned empty content. Using simple fallback instead.",
       });
+      return fallbackJson;
     }
-    throw new Error(`Groq text fallback HTTP error: ${res.status}`);
-  }
 
-  const data = await res.json();
-  const text = data?.choices?.[0]?.message?.content;
-  if (!text) {
-    throw new Error("Groq text fallback returned empty content.");
+    return JSON.parse(text);
+  } catch (err) {
+    console.error("Groq text fallback error:", err);
+    quotaWarnings.push({
+      source: "groq_text_fallback",
+      status: 500,
+      message:
+        "Groq text fallback threw an error. Using simple fallback instead.",
+    });
+    return fallbackJson;
   }
-
-  return JSON.parse(text);
 }
 
 // ========== Main handler ==========
@@ -645,27 +701,12 @@ Return STRICT JSON ONLY in this shape:
             "Gemini free-tier quota exceeded for model gemini-2.5-flash. Image-based analysis may be unavailable.",
         });
 
-        // If it's a TEXT-only query (manual mode), try Groq fallback
+        // If it's a TEXT-only query (manual mode), use Groq (or simple) fallback
         if (!image && safeQueryText) {
-          try {
-            console.log(
-              "Using Groq text-only fallback because Gemini quota is exhausted."
-            );
-            baseJson = await groqDescribeFromText(
-              safeQueryText,
-              quotaWarnings
-            );
-          } catch (fallbackErr) {
-            console.error("Groq text fallback also failed:", fallbackErr);
-            return res.status(429).json({
-              error:
-                "Gemini quota exceeded and Groq text fallback failed. Try again later or update API keys/quotas.",
-              details:
-                fallbackErr.message ||
-                "Check GROQ_API_KEY or try again later when quotas reset.",
-              meta: { quotaWarnings },
-            });
-          }
+          console.log(
+            "Using Groq text-only fallback (or minimal fallback) because Gemini quota is exhausted."
+          );
+          baseJson = await groqDescribeFromText(safeQueryText, quotaWarnings);
         } else {
           // Image-based modes can't work without a vision model
           return res.status(429).json({
