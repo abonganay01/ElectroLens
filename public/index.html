@@ -1093,10 +1093,33 @@
             cameraStatusText.textContent = "Camera API unavailable";
             return;
         }
-        cameraStream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: "environment" }
-        });
+        
+        // Updated constraints for better mobile support
+        const constraints = {
+            audio: false,
+            video: {
+                facingMode: "environment",
+                width: { ideal: 1280 },
+                height: { ideal: 720 }
+            }
+        };
+
+        try {
+            cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+        } catch (e) {
+            console.warn("Environment camera failed, trying default...", e);
+            cameraStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        }
+
         video.srcObject = cameraStream;
+        
+        // Explicitly play to avoid autoplay issues on some mobile browsers
+        try {
+            await video.play();
+        } catch (playErr) {
+            console.error("Video play error:", playErr);
+        }
+
         video.style.display = "block";
         cameraPreview.style.display = "none";
         camOverlay.style.display = "flex";
@@ -1105,8 +1128,14 @@
         toggleCameraBtn.textContent = "Stop";
         cameraStatusText.textContent = "STATUS: ACTIVE";
     } catch (err) {
-        console.error(err);
-        cameraStatusText.textContent = "Access denied or unavailable";
+        console.error("Camera Error:", err);
+        let msg = "Camera error";
+        if (err.name === 'NotAllowedError') msg = "Permission denied";
+        else if (err.name === 'NotFoundError') msg = "No camera found";
+        else if (err.name === 'NotReadableError') msg = "Camera in use";
+        else if (!window.isSecureContext) msg = "HTTPS required for camera";
+        
+        cameraStatusText.textContent = `Error: ${msg}`;
     }
   }
 
