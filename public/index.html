@@ -322,7 +322,7 @@
         border: 1px solid var(--border);
         background: var(--panel);
         padding: 4px;
-        margin-bottom: 12px;
+        margin-bottom: 10px;
     }
 
     :root[data-theme="light"] .mode-tabs {
@@ -353,7 +353,38 @@
         box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
     }
 
-    .mode-panel { margin-top: 8px; }
+    .model-select-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 10px;
+        font-size: 12px;
+        color: var(--muted);
+    }
+
+    .model-select-row label {
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-size: 11px;
+    }
+
+    .model-select-row select {
+        flex: 1;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: var(--panel);
+        color: var(--text);
+        padding: 6px 12px;
+        font-size: 12px;
+        outline: none;
+    }
+
+    :root[data-theme="light"] .model-select-row select {
+        background: #ffffff;
+    }
+
+    .mode-panel { margin-top: 4px; }
 
     .camera-shell {
         border-radius: var(--radius-md);
@@ -854,7 +885,7 @@
             <span class="brand-highlight">ElectroLens</span> – AI Electronics Encyclopedia
           </div>
           <div class="brand-subtitle">
-            Identify components, see specs, and explore projects using Gemini, Groq, and Google.
+            Identify components, see specs, and explore projects using Gemini, Groq, DeepSeek, and Google.
           </div>
         </div>
       </div>
@@ -900,6 +931,17 @@
           <button class="mode-tab active" data-mode="camera">📷 Camera</button>
           <button class="mode-tab" data-mode="upload">🖼 Upload</button>
           <button class="mode-tab" data-mode="manual">🔍 Type Name</button>
+        </div>
+
+        <!-- AI MODEL SELECTOR -->
+        <div class="model-select-row">
+          <label for="modelSelect">AI Model</label>
+          <select id="modelSelect">
+            <option value="auto">Auto (Gemini + Groq)</option>
+            <option value="gemini">Gemini only</option>
+            <option value="groq">Groq</option>
+            <option value="deepseek">DeepSeek</option>
+          </select>
         </div>
 
         <!-- CAMERA MODE -->
@@ -969,8 +1011,9 @@
               <div class="ency-title">ElectroLens Encyclopedia</div>
               <div class="ency-badges">
                 <span class="ency-chip">Gemini Vision</span>
-                <span class="ency-chip">Groq Mixtral</span>
-                <span class="ency-chip">Google Search</span>
+                <span class="ency-chip">Groq / DeepSeek</span>
+                <span class="ency-chip">Google / Serper</span>
+                <span class="ency-chip" id="modelChip">Mode: Auto (Gemini + Groq)</span>
               </div>
             </div>
             <div class="name-row">
@@ -1051,7 +1094,7 @@
                 <div class="ref-image-grid">
                   <div class="ref-block">
                     <div class="ref-img-label">Component photo</div>
-                    <img id="refImage" alt="Component photo from Google search" />
+                    <img id="refImage" alt="Component photo from search" />
                   </div>
                   <div class="ref-block">
                     <div class="ref-img-label">Example usage / application</div>
@@ -1059,18 +1102,18 @@
                   </div>
                   <div class="ref-block">
                     <div class="ref-img-label">Pinout diagram</div>
-                    <img id="pinoutImage" alt="Pinout diagram from Google search" />
+                    <img id="pinoutImage" alt="Pinout diagram from search" />
                   </div>
                 </div>
                 <p class="hint" style="margin-top:6px;">
-                  Images are fetched using Google search. Always confirm pinouts and specs using the official datasheet.
+                  Images are suggested via Gemini + web context. Always confirm pinouts and specs using the official datasheet.
                 </p>
               </div>
             </div>
           </div>
 
           <div class="status-bar">
-            <span id="aiStatusText">Ready – choose a mode and analyze.</span>
+            <span id="aiStatusText">Ready – choose a mode, pick an AI model, and analyze.</span>
             <div class="loader" id="globalLoader"></div>
           </div>
         </div>
@@ -1085,11 +1128,11 @@
       </article>
       <article class="info-card">
         <h3>2 · Engineering Knowledge</h3>
-        <p>Groq’s Mixtral model refines the explanation, adds specs, project ideas, and safety notes like an engineer.</p>
+        <p>Groq or DeepSeek refines the explanation, adds specs, project ideas, and safety notes like an engineer.</p>
       </article>
       <article class="info-card">
         <h3>3 · Real-World Links</h3>
-        <p>Google Custom Search finds real images, datasheets, and shop links (Shopee, Lazada, Amazon, AliExpress).</p>
+        <p>Google Custom Search and Serper find real images, datasheets, and shop links (Shopee, Lazada, Amazon, AliExpress).</p>
       </article>
     </section>
 
@@ -1130,6 +1173,9 @@
     manual: document.getElementById("mode-manual"),
   };
 
+  const modelSelect = document.getElementById("modelSelect");
+  const modelChip = document.getElementById("modelChip");
+
   const video = document.getElementById("camera");
   const cameraPreview = document.getElementById("cameraCapturePreview");
   const analyzeCameraBtn = document.getElementById("analyzeCameraBtn");
@@ -1167,6 +1213,36 @@
 
   let cameraStream = null;
   let analyzing = false;
+
+  const MODEL_LABELS = {
+    auto: "Auto (Gemini + Groq)",
+    gemini: "Gemini only",
+    groq: "Groq",
+    deepseek: "DeepSeek"
+  };
+
+  let selectedModel = localStorage.getItem("electrolens-model") || "auto";
+
+  function applyModelSelection(model) {
+    const normalized = ["auto", "gemini", "groq", "deepseek"].includes(model)
+      ? model
+      : "auto";
+    selectedModel = normalized;
+    localStorage.setItem("electrolens-model", normalized);
+    if (modelSelect) modelSelect.value = normalized;
+    if (modelChip) modelChip.textContent = "Mode: " + (MODEL_LABELS[normalized] || MODEL_LABELS.auto);
+  }
+
+  function initModelSelection() {
+    applyModelSelection(selectedModel);
+  }
+
+  initModelSelection();
+
+  modelSelect.addEventListener("change", (e) => {
+    applyModelSelection(e.target.value);
+    aiStatusText.textContent = "Model set to " + (MODEL_LABELS[selectedModel] || selectedModel) + " – analyze a component.";
+  });
 
   // Mode switching
   modeTabs.forEach(tab => {
@@ -1304,17 +1380,20 @@
     if (e.key === "Enter") manualSearchBtn.click();
   });
 
-  // ===== UPDATED analyzeWithBackend with quota display =====
+  // ===== analyzeWithBackend with model + blank-section explanation =====
   async function analyzeWithBackend(payload) {
     analyzing = true;
     globalLoader.style.display = "inline-block";
-    aiStatusText.textContent = "Analyzing component…";
+    aiStatusText.textContent = "Analyzing component with " + (MODEL_LABELS[selectedModel] || selectedModel) + "…";
 
     try {
       const res = await fetch("/api/electro-lookup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({
+          ...payload,
+          preferredModel: selectedModel
+        })
       });
 
       let data = null;
@@ -1329,13 +1408,13 @@
           ? data.meta.quotaWarnings
           : [];
 
-      // If backend returned an error (4xx/5xx), show the exact reason + quota info
+      // If backend returned an error (4xx/5xx), show reason + quota info
       if (!res.ok || !data) {
         const baseError = (data && (data.error || data.message)) || "Backend error.";
         const detailsText = data && data.details ? ` (${data.details})` : "";
 
         const quotaText = quotaWarnings.length
-          ? " | API quota notice: " +
+          ? " | API quota/config notice: " +
             quotaWarnings
               .map(q => `${q.source}: ${q.message}`)
               .join(" · ")
@@ -1344,29 +1423,18 @@
         aiStatusText.textContent = `${baseError}${detailsText}${quotaText}`;
 
         descriptionEl.innerHTML =
-          '<p class="placeholder">Analysis failed. This is often caused by API quota limits (e.g. Gemini, Groq, Google Custom Search, Serper). Try again later or check the API dashboards.</p>';
+          '<p class="placeholder">Analysis failed. This is often caused by API quota limits or missing API keys (Gemini, Groq, DeepSeek, Google CSE, Serper). Try again later, check your keys, or switch the AI model in the selector.</p>';
         return;
       }
 
-      // Backend OK: render encyclopedia content
+      // Backend OK: render encyclopedia content (renderResult will set final status)
       renderResult(data, payload.queryText || "");
-
-      // If some APIs are hitting quota but we still got a result, show a softer warning
-      if (quotaWarnings.length) {
-        const quotaText = quotaWarnings
-          .map(q => `${q.source}: ${q.message}`)
-          .join(" · ");
-        aiStatusText.textContent =
-          "Done – but some APIs reported quota issues: " + quotaText;
-      } else {
-        aiStatusText.textContent = "Done – analyze another item if you like.";
-      }
     } catch (err) {
       console.error(err);
       aiStatusText.textContent =
-        "Error – check console or API configuration (Gemini / Groq / Google / Serper).";
+        "Error – check console or API configuration (Gemini / Groq / DeepSeek / Google / Serper).";
       descriptionEl.innerHTML =
-        '<p class="placeholder">Failed to analyze. Please verify your Gemini, Groq, Google CSE, and Serper API keys and quotas.</p>';
+        '<p class="placeholder">Failed to analyze. Please verify your API keys and quotas, then try again or switch AI model.</p>';
     } finally {
       analyzing = false;
       globalLoader.style.display = "none";
@@ -1390,25 +1458,55 @@
   }
 
   function renderResult(r, queryText) {
+    const meta = r.meta || {};
+    const quotaWarnings = Array.isArray(meta.quotaWarnings) ? meta.quotaWarnings : [];
+    const backendModel = meta.preferredModel || selectedModel || "auto";
+
+    // Sync UI to the model actually used by backend (including fallbacks)
+    applyModelSelection(backendModel);
+
+    const modelLabel = MODEL_LABELS[backendModel] || MODEL_LABELS.auto;
+
     deviceNameEl.textContent = r.name || queryText || "Unknown device";
     deviceCategoryEl.textContent = r.category || "Other";
 
+    // Description
     descriptionEl.innerHTML = "";
     const p = document.createElement("p");
-    p.textContent = r.description || "No description available.";
+    p.textContent = r.description || "No description available from the current model.";
     descriptionEl.appendChild(p);
 
-    renderList(typicalUsesEl, r.typical_uses, "No typical uses listed.");
-    renderList(whereToBuyEl, r.where_to_buy, "No buying sources listed.");
-    renderList(keySpecsEl, r.key_specs, "No key specs listed.");
-    renderList(projectIdeasEl, r.project_ideas, "No project ideas listed.");
-    renderList(commonMistakesEl, r.common_mistakes, "No common mistakes listed.");
+    renderList(
+      typicalUsesEl,
+      r.typical_uses,
+      "No typical uses listed by this model."
+    );
+    renderList(
+      whereToBuyEl,
+      r.where_to_buy,
+      "No buying sources listed by this model."
+    );
+    renderList(
+      keySpecsEl,
+      r.key_specs,
+      "No key specs were returned by this model."
+    );
+    renderList(
+      projectIdeasEl,
+      r.project_ideas,
+      "No project ideas were generated by this model."
+    );
+    renderList(
+      commonMistakesEl,
+      r.common_mistakes,
+      "No common mistakes were returned by this model."
+    );
 
     datasheetHintEl.innerHTML = "";
     const dh = document.createElement("p");
     dh.textContent =
       r.datasheet_hint ||
-      "Search for the device name + 'datasheet' in your browser.";
+      "No specific datasheet hint from the model – search for the device name + 'datasheet' in your browser.";
     datasheetHintEl.appendChild(dh);
 
     referencesEl.innerHTML = "";
@@ -1448,7 +1546,7 @@
 
     if (!hasRefs) {
       referencesEl.innerHTML =
-        '<p class="placeholder">No external references found.</p>';
+        '<p class="placeholder">No external references were returned. This may happen when search APIs are limited or the part name is ambiguous.</p>';
     }
 
     shopLinksEl.innerHTML = "";
@@ -1471,7 +1569,7 @@
     }
     if (!shopLinksEl.innerHTML.trim()) {
       shopLinksEl.innerHTML =
-        '<span class="placeholder">No online shop links generated.</span>';
+        '<span class="placeholder">No online shop links generated for this item.</span>';
     }
 
     if (r.real_image) {
@@ -1494,6 +1592,54 @@
     } else {
       pinoutImageEl.style.display = "none";
     }
+
+    // ----- Explain missing sections + suggest switching model -----
+    const missingSections = [];
+
+    if (!r.description) missingSections.push("overview");
+    if (!Array.isArray(r.typical_uses) || !r.typical_uses.length) missingSections.push("typical uses");
+    if (!Array.isArray(r.where_to_buy) || !r.where_to_buy.length) missingSections.push("where to buy");
+    if (!Array.isArray(r.key_specs) || !r.key_specs.length) missingSections.push("key specs");
+    if (!Array.isArray(r.project_ideas) || !r.project_ideas.length) missingSections.push("project ideas");
+    if (!Array.isArray(r.common_mistakes) || !r.common_mistakes.length) missingSections.push("common mistakes");
+    if (!r.datasheet_url && (!Array.isArray(r.references) || !r.references.length)) missingSections.push("datasheet & references");
+    if (!r.real_image) missingSections.push("component photo");
+    if (!r.usage_image) missingSections.push("usage image");
+    if (!r.pinout_image) missingSections.push("pinout diagram");
+
+    let statusMsg = `Done – using ${modelLabel}.`;
+
+    if (quotaWarnings.length) {
+      const qShort = quotaWarnings.map(q => q.source).join(", ");
+      statusMsg += ` Some APIs reported quota or configuration issues: ${qShort}.`;
+    }
+
+    if (missingSections.length) {
+      statusMsg += ` Some sections are empty (${missingSections.join(", ")}). `;
+
+      if (quotaWarnings.length) {
+        statusMsg += `These gaps are likely due to those API limits or missing keys.`;
+      } else {
+        statusMsg += `This can happen when the selected model returns limited structured data or cannot fetch matching images.`;
+      }
+
+      const suggestAlt =
+        backendModel === "auto"
+          ? "Try switching explicitly to Gemini, Groq, or DeepSeek in the AI Model selector and re-analyze."
+          : backendModel === "gemini"
+          ? "Try Groq or DeepSeek for a more detailed text encyclopedia and re-analyze."
+          : backendModel === "groq"
+          ? "Try Gemini or DeepSeek if you need different style/spec coverage, then re-analyze."
+          : "Try Gemini or Groq if you need a different style of explanation or images, then re-analyze.";
+
+      statusMsg += " " + suggestAlt;
+    }
+
+    if (!missingSections.length && !quotaWarnings.length) {
+      statusMsg = `Done – using ${modelLabel}. All sections populated. Analyze another item if you like.`;
+    }
+
+    aiStatusText.textContent = statusMsg;
   }
 
   window.addEventListener("load", () => {
