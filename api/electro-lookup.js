@@ -1,12 +1,43 @@
+// /pages/api/electro-lookup.js (Next.js API route)
+
+// Uses Node runtime (NOT Edge)
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import fetch from "node-fetch";
+// ❌ REMOVE this, we will use the built-in fetch:
+// import fetch from "node-fetch";
+
+// ---------------------------------------------------------
+// Next.js API config: disable built-in bodyParser so we can
+// manually read large JSON bodies (for base64 images).
+// ---------------------------------------------------------
+export const config = {
+  api: {
+    bodyParser: false, // IMPORTANT: we use readJsonBody instead
+  },
+};
+
+// (optional but nice to be explicit in app+pages hybrid projects)
+export const runtime = "nodejs";
 
 // ========== Helpers: request body + image parsing ==========
 
 async function readJsonBody(req) {
+  // Hard limit ~8MB of JSON text
+  const MAX_BYTES = 8 * 1024 * 1024;
+
   return await new Promise((resolve, reject) => {
     let data = "";
-    req.on("data", chunk => (data += chunk));
+    let bytes = 0;
+
+    req.on("data", (chunk) => {
+      bytes += chunk.length;
+      if (bytes > MAX_BYTES) {
+        reject(new Error("Request body too large"));
+        req.destroy();
+        return;
+      }
+      data += chunk;
+    });
+
     req.on("end", () => {
       try {
         resolve(data ? JSON.parse(data) : {});
@@ -14,6 +45,7 @@ async function readJsonBody(req) {
         reject(err);
       }
     });
+
     req.on("error", reject);
   });
 }
@@ -52,63 +84,97 @@ async function googleImageSearch(query) {
   }
 }
 
-// ========== DuckDuckGo Image Search (fallback, no key) ==========
+// ========== Serper API helpers (fallback, no DuckDuckGo) ==========
+// Docs: https://serper.dev
 
-async function duckduckgoImageSearch(query) {
-  if (!query) return null;
+async function serperImageSearch(query) {
+  const serperKey = process.env.SERPER_API_KEY;
+  if (!serperKey || !query) return null;
 
   try {
-    // Step 1: get vqd token
-    const initRes = await fetch(
-      `https://duckduckgo.com/?q=${encodeURIComponent(
-        query
-      )}&iax=images&ia=images`,
-      {
-        headers: {
-          // Simple user-agent to avoid being blocked
-          "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        }
-      }
-    );
+    const res = await fetch("https://google.serper.dev/images", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-API-KEY": serperKey,
+      },
+      body: JSON.stringify({
+        q: query,
+        num: 1,
+      }),
+    });
 
-    const html = await initRes.text();
-    const tokenMatch = html.match(/vqd=([\d-]+)/);
-    if (!tokenMatch) {
-      console.error("DuckDuckGo: vqd token not found");
+    if (!res.ok) {
+      console.error("Serper image search HTTP error:", res.status);
       return null;
     }
 
-    const vqd = tokenMatch[1];
+    const data = await res.json();
+    const first = Array.isArray(data.images) ? data.images[0] : null;
+    if (!first) return null;
 
-    // Step 2: fetch images JSON
-    const apiRes = await fetch(
-      `https://duckduckgo.com/i.js?l=us-en&o=json&q=${encodeURIComponent(
-        query
-      )}&vqd=${vqd}`,
-      {
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-          Referer: "https://duckduckgo.com/"
-        }
-      }
-    );
-
-    if (!apiRes.ok) {
-      console.error("DuckDuckGo image HTTP error:", apiRes.status);
-      return null;
-    }
-
-    const data = await apiRes.json();
-    return data.results?.[0]?.image || null;
+    return first.imageUrl || first.thumbnailUrl || first.link || null;
   } catch (err) {
-    console.error("DuckDuckGo image search error:", err);
+    console.error("Serper image search error:", err);
     return null;
   }
 }
 
-// unified helper: Google first, then DuckDuckGo
+async function serperDatasheetSearch(query) {
+  const serperKey = process.env.SERPER_API_KEY;
+  if (!serperKey || !query) {
+    return { datasheetUrl: null, references: [] };
+  }
+
+  try {
+    const res = await fetch("https://google.serper.dev/search", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-API-KEY": serperKey,
+      },
+      body: JSON.stringify({
+        q: `${query} datasheet pdf`,
+        num: 5,
+      }),
+    });
+
+    if (!res.ok) {
+      console.error("Serper datasheet search HTTP error:", res.status);
+      return { datasheetUrl: null, references: [] };
+    }
+
+    const data = await res.json();
+    const organic = Array.isArray(data.organic) ? data.organic : [];
+
+    let datasheetUrl = null;
+    const references = [];
+
+    for (const item of organic) {
+      const link = item.link || "";
+      if (
+        !datasheetUrl &&
+        (link.endsWith(".pdf") || link.toLowerCase().includes("datasheet"))
+      ) {
+        datasheetUrl = link;
+      }
+      if (references.length < 4) {
+        references.push({
+          title: item.title || "",
+          url: link,
+          snippet: item.snippet || "",
+        });
+      }
+    }
+
+    return { datasheetUrl, references };
+  } catch (err) {
+    console.error("Serper datasheet search error:", err);
+    return { datasheetUrl: null, references: [] };
+  }
+}
+
+// unified helper: Google first, then Serper
 async function smartImageSearch(query) {
   if (!query) return null;
 
@@ -117,9 +183,9 @@ async function smartImageSearch(query) {
   if (url) return url;
 
   console.warn(
-    "Google image search failed or quota exceeded – falling back to DuckDuckGo."
+    "Google image search failed or quota exceeded – falling back to Serper."
   );
-  url = await duckduckgoImageSearch(query);
+  url = await serperImageSearch(query);
   return url || null;
 }
 
@@ -140,7 +206,9 @@ async function fetchPinoutImageFromGoogle(nameOrQuery) {
   return smartImageSearch(q);
 }
 
-async function fetchDatasheetAndReferences(name) {
+// ---------- Datasheets & references: Google first, Serper fallback ----------
+
+async function googleDatasheetAndReferences(name) {
   const apiKey = process.env.CSE_API_KEY;
   const cx = process.env.CSE_CX;
   if (!apiKey || !cx || !name) return { datasheetUrl: null, references: [] };
@@ -173,7 +241,7 @@ async function fetchDatasheetAndReferences(name) {
         references.push({
           title: item.title || "",
           url: link,
-          snippet: item.snippet || ""
+          snippet: item.snippet || "",
         });
       }
     }
@@ -185,6 +253,37 @@ async function fetchDatasheetAndReferences(name) {
   }
 }
 
+async function fetchDatasheetAndReferences(name) {
+  if (!name) return { datasheetUrl: null, references: [] };
+
+  // 1) Google CSE
+  let { datasheetUrl, references } = await googleDatasheetAndReferences(name);
+
+  const needsFallback =
+    !datasheetUrl || !Array.isArray(references) || references.length === 0;
+
+  if (!needsFallback) {
+    return { datasheetUrl, references };
+  }
+
+  console.warn(
+    "Google datasheet search insufficient – falling back to Serper for datasheet & references."
+  );
+
+  // 2) Serper fallback
+  const serperResult = await serperDatasheetSearch(name);
+
+  if (!datasheetUrl && serperResult.datasheetUrl) {
+    datasheetUrl = serperResult.datasheetUrl;
+  }
+
+  if (!Array.isArray(references) || references.length === 0) {
+    references = serperResult.references || [];
+  }
+
+  return { datasheetUrl, references };
+}
+
 // ========== Shop links ==========
 
 function generateShopLinks(nameOrQuery) {
@@ -193,7 +292,7 @@ function generateShopLinks(nameOrQuery) {
     shopee: `https://shopee.ph/search?keyword=${q}`,
     lazada: `https://www.lazada.com.ph/tag/${q}/`,
     amazon: `https://www.amazon.com/s?k=${q}`,
-    aliexpress: `https://www.aliexpress.com/wholesale?SearchText=${q}`
+    aliexpress: `https://www.aliexpress.com/wholesale?SearchText=${q}`,
   };
 }
 
@@ -278,8 +377,8 @@ GENERAL:
     model: "mixtral-8x7b-32768",
     messages: [
       { role: "system", content: systemPrompt },
-      { role: "user", content: JSON.stringify(baseJson, null, 2) }
-    ]
+      { role: "user", content: JSON.stringify(baseJson, null, 2) },
+    ],
   };
 
   try {
@@ -287,10 +386,15 @@ GENERAL:
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${groqKey}`
+        Authorization: `Bearer ${groqKey}`,
       },
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
     });
+
+    if (!res.ok) {
+      console.error("Groq HTTP error:", res.status, await res.text());
+      return baseJson;
+    }
 
     const data = await res.json();
     const text = data?.choices?.[0]?.message?.content;
@@ -315,7 +419,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const body = await readJsonBody(req);
+    const body = await readJsonBody(req); // works for camera, upload, and type search
     const { image } = body || {};
     const rawQueryText =
       body && typeof body.queryText === "string" ? body.queryText : "";
@@ -329,7 +433,7 @@ export default async function handler(req, res) {
     if (!geminiKey) {
       console.error("Missing GOOGLE_API_KEY");
       return res.status(500).json({
-        error: "Server misconfigured: GOOGLE_API_KEY missing."
+        error: "Server misconfigured: GOOGLE_API_KEY missing.",
       });
     }
 
@@ -382,14 +486,15 @@ Return STRICT JSON ONLY in this shape:
       const extracted = extractBase64FromDataUrl(image);
       if (!extracted) {
         return res.status(400).json({
-          error: "Image must be a base64 data URL like data:image/jpeg;base64,..."
+          error:
+            "Image must be a base64 data URL like data:image/jpeg;base64,...",
         });
       }
       parts.push({
         inlineData: {
           mimeType: extracted.mimeType,
-          data: extracted.base64
-        }
+          data: extracted.base64,
+        },
       });
       if (safeQueryText) {
         parts.push({ text: `User text label: "${safeQueryText}"` });
@@ -400,14 +505,18 @@ Return STRICT JSON ONLY in this shape:
 
     const geminiResp = await model.generateContent({
       contents: [{ role: "user", parts }],
-      generationConfig: { responseMimeType: "application/json" }
+      generationConfig: { responseMimeType: "application/json" },
     });
 
     let baseJson;
     try {
-      baseJson = JSON.parse(geminiResp.response.text());
+      const rawText = geminiResp.response.text();
+      baseJson = JSON.parse(rawText);
     } catch (err) {
-      console.error("Failed to parse Gemini JSON:", geminiResp.response.text());
+      console.error(
+        "Failed to parse Gemini JSON:",
+        geminiResp?.response?.text?.() || geminiResp
+      );
       return res
         .status(500)
         .json({ error: "Failed to parse Gemini response as JSON." });
@@ -419,12 +528,12 @@ Return STRICT JSON ONLY in this shape:
       safeQueryText ||
       "electronics component";
 
-    // Images (Google first, DuckDuckGo fallback)
+    // Images (Google first, Serper fallback)
     baseJson.real_image = await fetchRealImageFromGoogle(nameOrQuery);
     baseJson.usage_image = await fetchUsageImageFromGoogle(nameOrQuery);
     baseJson.pinout_image = await fetchPinoutImageFromGoogle(nameOrQuery);
 
-    // Datasheet + references
+    // Datasheet + references (Google first, Serper fallback)
     const ds = await fetchDatasheetAndReferences(
       baseJson.name || safeQueryText || ""
     );
@@ -447,7 +556,7 @@ Return STRICT JSON ONLY in this shape:
       pinout_image: baseJson.pinout_image,
       datasheet_url: baseJson.datasheet_url,
       references: baseJson.references,
-      shop_links: baseJson.shop_links
+      shop_links: baseJson.shop_links,
     };
 
     if (baseJson.official_store && !finalJson.official_store) {
@@ -457,8 +566,9 @@ Return STRICT JSON ONLY in this shape:
     return res.status(200).json(finalJson);
   } catch (err) {
     console.error("Error in /api/electro-lookup:", err);
-    return res
-      .status(500)
-      .json({ error: "Internal server error in electro-lookup." });
+    return res.status(500).json({
+      error: "Internal server error in electro-lookup.",
+      details: err.message || String(err),
+    });
   }
 }
