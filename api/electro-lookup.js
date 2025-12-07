@@ -3,23 +3,17 @@
 // Uses Node runtime (Vercel serverless / Node, NOT Edge)
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// ---------------------------------------------------------
-// Vercel / Next API config: disable automatic body parsing
-// so we can manually read large base64 JSON bodies.
-// ---------------------------------------------------------
 export const config = {
   api: {
     bodyParser: false,
   },
 };
 
-// (optional, but helps in Next hybrids)
 export const runtime = "nodejs";
 
 // ========== Helpers: request body + image parsing ==========
 
 async function readJsonBody(req) {
-  // Hard limit ~8MB of JSON text
   const MAX_BYTES = 8 * 1024 * 1024;
 
   return await new Promise((resolve, reject) => {
@@ -57,7 +51,6 @@ function extractBase64FromDataUrl(dataUrl) {
   return { mimeType: match[1], base64: match[2] };
 }
 
-// Small helper to detect quota-ish HTTP statuses
 function isQuotaStatus(status) {
   return status === 429 || status === 402 || status === 403;
 }
@@ -94,8 +87,7 @@ async function googleImageSearch(query, quotaWarnings = []) {
   }
 }
 
-// ========== Serper API helpers (images + datasheet fallback) ==========
-// Docs: https://serper.dev
+// ========== Serper (images + datasheet search fallback) ==========
 
 async function serperImageSearch(query, quotaWarnings = []) {
   const serperKey = process.env.SERPER_API_KEY;
@@ -137,11 +129,9 @@ async function serperImageSearch(query, quotaWarnings = []) {
   }
 }
 
-// unified helper: Google first, then Serper
 async function smartImageSearch(query, quotaWarnings = []) {
   if (!query) return null;
 
-  // Try Google CSE first
   let url = await googleImageSearch(query, quotaWarnings);
   if (url) return url;
 
@@ -152,19 +142,16 @@ async function smartImageSearch(query, quotaWarnings = []) {
   return url || null;
 }
 
-// Wrappers that keep your original function names
 async function fetchRealImageFromGoogle(nameOrQuery, quotaWarnings = []) {
   return smartImageSearch(nameOrQuery, quotaWarnings);
 }
 
 async function fetchUsageImageFromGoogle(nameOrQuery, quotaWarnings = []) {
-  // try to get an application / example circuit image
   const q = `${nameOrQuery} application circuit electronics example`;
   return smartImageSearch(q, quotaWarnings);
 }
 
 async function fetchPinoutImageFromGoogle(nameOrQuery, quotaWarnings = []) {
-  // try to get a pinout diagram
   const q = `${nameOrQuery} pinout diagram`;
   return smartImageSearch(q, quotaWarnings);
 }
@@ -287,7 +274,6 @@ async function googleDatasheetAndReferences(name, quotaWarnings = []) {
 async function fetchDatasheetAndReferences(name, quotaWarnings = []) {
   if (!name) return { datasheetUrl: null, references: [] };
 
-  // 1) Google CSE
   let { datasheetUrl, references } = await googleDatasheetAndReferences(
     name,
     quotaWarnings
@@ -304,7 +290,6 @@ async function fetchDatasheetAndReferences(name, quotaWarnings = []) {
     "Google datasheet search insufficient – falling back to Serper for datasheet & references."
   );
 
-  // 2) Serper fallback
   const serperResult = await serperDatasheetSearch(name, quotaWarnings);
 
   if (!datasheetUrl && serperResult.datasheetUrl) {
@@ -330,7 +315,7 @@ function generateShopLinks(nameOrQuery) {
   };
 }
 
-// ========== Groq refinement: make it a real encyclopedia ==========
+// ========== Groq refinement ==========
 
 async function groqRefine(baseJson, quotaWarnings = []) {
   const groqKey = process.env.GROQ_API_KEY;
@@ -415,7 +400,7 @@ GENERAL:
     });
 
     if (!res.ok) {
-      console.error("Groq HTTP error:", res.status, await res.text());
+      console.error("Groq refine HTTP error:", res.status, await res.text());
       if (isQuotaStatus(res.status)) {
         quotaWarnings.push({
           source: "groq_refine",
@@ -429,7 +414,7 @@ GENERAL:
     const data = await res.json();
     const text = data?.choices?.[0]?.message?.content;
     if (!text) {
-      console.log("⚠️ Groq empty content, falling back to baseJson.");
+      console.log("⚠️ Groq refine empty content, falling back to baseJson.");
       return baseJson;
     }
 
@@ -440,7 +425,7 @@ GENERAL:
   }
 }
 
-// ========== DeepSeek refinement (encyclopedia-style) ==========
+// ========== DeepSeek refinement ==========
 
 async function deepseekRefine(baseJson, quotaWarnings = []) {
   const deepseekKey = process.env.DEEPSEEK_API_KEY;
@@ -508,19 +493,18 @@ Return ONLY a valid JSON object. No markdown, no extra commentary, no code fence
   }
 }
 
-// ========== Groq text-only fallback / description ==========
+// ========== Groq text-only describe (no image) ==========
 
 async function groqDescribeFromText(queryText, quotaWarnings = []) {
   const groqKey = process.env.GROQ_API_KEY;
   const safeName = queryText || "Unknown electronics item";
 
-  // Base fallback JSON that we can always return
   const fallbackJson = {
     name: safeName,
     category: "Other",
     description:
       "Generic auto-generated encyclopedia entry based on the item name. " +
-      "For precise electrical values, pinouts, and absolute ratings, always confirm using the official datasheet and manufacturer reference designs.",
+      "For exact ratings, pinouts, and limits, always confirm using the official datasheet and manufacturer documentation.",
     typical_uses: [],
     where_to_buy: [],
     key_specs: [],
@@ -532,13 +516,12 @@ async function groqDescribeFromText(queryText, quotaWarnings = []) {
     image_search_query: safeName || "electronics component",
   };
 
-  // If there is no Groq API key, just return the fallback JSON
   if (!groqKey) {
     quotaWarnings.push({
       source: "groq_text_fallback",
       status: 500,
       message:
-        "GROQ_API_KEY not set. Using a simple generic entry. Set GROQ_API_KEY or switch to another model in the UI.",
+        "GROQ_API_KEY not set. Using a simple generic entry. Configure GROQ_API_KEY on the server for richer text.",
     });
     return fallbackJson;
   }
@@ -588,7 +571,7 @@ Return STRICT JSON ONLY in this shape:
 
     if (!res.ok) {
       const errText = await res.text();
-      console.error("Groq text fallback HTTP error:", res.status, errText);
+      console.error("Groq text HTTP error:", res.status, errText);
       quotaWarnings.push({
         source: "groq_text_fallback",
         status: res.status,
@@ -603,7 +586,7 @@ Return STRICT JSON ONLY in this shape:
     const data = await res.json();
     const text = data?.choices?.[0]?.message?.content;
     if (!text) {
-      console.error("Groq text fallback returned empty content.");
+      console.error("Groq text returned empty content.");
       quotaWarnings.push({
         source: "groq_text_fallback",
         status: 500,
@@ -615,7 +598,7 @@ Return STRICT JSON ONLY in this shape:
 
     return JSON.parse(text);
   } catch (err) {
-    console.error("Groq text fallback error:", err);
+    console.error("Groq text error:", err);
     quotaWarnings.push({
       source: "groq_text_fallback",
       status: 500,
@@ -626,8 +609,7 @@ Return STRICT JSON ONLY in this shape:
   }
 }
 
-
-// ========== DeepSeek text-only description ==========
+// ========== DeepSeek text-only describe (no image) ==========
 
 async function deepseekDescribeFromText(queryText, quotaWarnings = []) {
   const deepseekKey = process.env.DEEPSEEK_API_KEY;
@@ -638,7 +620,7 @@ async function deepseekDescribeFromText(queryText, quotaWarnings = []) {
     category: "Other",
     description:
       "Generic auto-generated encyclopedia entry based on the item name. " +
-      "For accurate ratings, pinouts, and timing details, always verify using the official datasheet and hardware documentation.",
+      "For precise electrical values and pinouts, always verify using the official datasheet and reference designs.",
     typical_uses: [],
     where_to_buy: [],
     key_specs: [],
@@ -655,7 +637,7 @@ async function deepseekDescribeFromText(queryText, quotaWarnings = []) {
       source: "deepseek_text_fallback",
       status: 500,
       message:
-        "DEEPSEEK_API_KEY not set. Using a simple generic entry. Set DEEPSEEK_API_KEY or switch to another model in the UI.",
+        "DEEPSEEK_API_KEY not set. Using a simple generic entry. Configure DEEPSEEK_API_KEY on the server for richer text.",
     });
     return fallbackJson;
   }
@@ -737,12 +719,11 @@ Return STRICT JSON ONLY in this exact shape:
       source: "deepseek_text_fallback",
       status: 500,
       message:
-        "DeepSeek text threw an error. Using a generic entry instead.",
+        "DeepSeek text fallback threw an error. Using a generic entry instead.",
     });
     return fallbackJson;
   }
 }
-
 
 // ========== Main handler ==========
 
@@ -752,42 +733,31 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  // Collect quota-related warnings here and return in meta.quotaWarnings
   const quotaWarnings = [];
 
   try {
-    const body = await readJsonBody(req); // works for camera, upload, and type search
+    const body = await readJsonBody(req);
     const { image } = body || {};
     const rawQueryText =
       body && typeof body.queryText === "string" ? body.queryText : "";
     const safeQueryText = rawQueryText.trim();
 
-    // preferredModel: "auto" | "gemini" | "groq" | "deepseek"
-    const preferredRaw =
-      body && typeof body.preferredModel === "string"
-        ? body.preferredModel.toLowerCase()
-        : "auto";
-    const allowedModels = ["auto", "gemini", "groq", "deepseek"];
-    let preferredModel = allowedModels.includes(preferredRaw)
-      ? preferredRaw
-      : "auto";
-    let backendModel = preferredModel; // will update if we fall back
-
     if (!image && !safeQueryText) {
       return res.status(400).json({
         error: "Provide an image or queryText.",
-        meta: { quotaWarnings, preferredModel: backendModel },
+        meta: { quotaWarnings, preferredModel: "fallback" },
       });
     }
 
     const geminiKey = process.env.GOOGLE_API_KEY;
 
-    let baseJson;
+    let baseJson = null;
+    let baseModel = "fallback"; // "gemini" | "groq" | "deepseek" | "fallback"
 
-    // ========== 1. Get baseJson depending on mode & preferred model ==========
+    // ========== 1. Get a base JSON description ==========
 
     if (image) {
-      // ----- IMAGE MODE: Gemini Vision is required -----
+      // IMAGE MODE – requires Gemini Vision for now
       if (!geminiKey) {
         console.error("Missing GOOGLE_API_KEY for image mode");
         quotaWarnings.push({
@@ -799,7 +769,7 @@ export default async function handler(req, res) {
         return res.status(500).json({
           error:
             "Server misconfigured: GOOGLE_API_KEY missing. Camera and upload analysis require Gemini Vision.",
-          meta: { quotaWarnings, preferredModel: backendModel },
+          meta: { quotaWarnings, preferredModel: "fallback" },
         });
       }
 
@@ -846,22 +816,24 @@ Return STRICT JSON ONLY in this shape:
 - "image_search_query": the best search phrase to find images of this exact device (e.g. "ESP32 DevKitC board", "LM7805 TO-220").
 `;
 
-      const parts = [{ text: basePrompt }];
-
       const extracted = extractBase64FromDataUrl(image);
       if (!extracted) {
         return res.status(400).json({
           error:
             "Image must be a base64 data URL like data:image/jpeg;base64,...",
-          meta: { quotaWarnings, preferredModel: backendModel },
+          meta: { quotaWarnings, preferredModel: "fallback" },
         });
       }
-      parts.push({
-        inlineData: {
-          mimeType: extracted.mimeType,
-          data: extracted.base64,
+
+      const parts = [
+        { text: basePrompt },
+        {
+          inlineData: {
+            mimeType: extracted.mimeType,
+            data: extracted.base64,
+          },
         },
-      });
+      ];
       if (safeQueryText) {
         parts.push({ text: `User text label: "${safeQueryText}"` });
       }
@@ -874,8 +846,7 @@ Return STRICT JSON ONLY in this shape:
 
         const rawText = geminiResp.response.text();
         baseJson = JSON.parse(rawText);
-        // In image-mode, Gemini always does the first pass.
-        // Refinement later will be chosen by backendModel.
+        baseModel = "gemini";
       } catch (err) {
         const msg = String(err || "");
         const isQuotaError =
@@ -884,55 +855,43 @@ Return STRICT JSON ONLY in this shape:
           msg.includes("Quota exceeded for metric");
 
         if (isQuotaError) {
-          console.error("Gemini quota exceeded. Raw error:", msg);
+          console.error("Gemini vision quota exceeded:", msg);
           quotaWarnings.push({
             source: "gemini",
             status: 429,
             message:
-              "Gemini free-tier quota exceeded for model gemini-2.5-flash. Image-based analysis may be unavailable.",
+              "Gemini free-tier quota exceeded for model gemini-2.5-flash. Image-based analysis is temporarily unavailable.",
           });
 
           return res.status(429).json({
             error: "Gemini vision quota exceeded.",
             details:
-              "Camera and upload analysis require Gemini (vision). Your free-tier Gemini quota is used up. Try again after the quota resets or upgrade your Gemini plan.",
-            meta: { quotaWarnings, preferredModel: backendModel },
+              "Camera and upload analysis require Gemini (vision). The free-tier Gemini quota is used up.",
+            meta: { quotaWarnings, preferredModel: "fallback" },
           });
         } else {
-          console.error("Gemini error:", err);
+          console.error("Gemini vision error:", err);
           return res.status(500).json({
             error: "Failed to call Gemini generateContent for image.",
             details: msg,
-            meta: { quotaWarnings, preferredModel: backendModel },
+            meta: { quotaWarnings, preferredModel: "fallback" },
           });
         }
       }
     } else {
-      // ----- TEXT-ONLY MODE -----
-      if (preferredModel === "groq") {
-        baseJson = await groqDescribeFromText(safeQueryText, quotaWarnings);
-        backendModel = "groq";
-      } else if (preferredModel === "deepseek") {
-        baseJson = await deepseekDescribeFromText(safeQueryText, quotaWarnings);
-        backendModel = "deepseek";
-      } else {
-        // auto or gemini → Gemini-first with Groq fallback
-        if (!geminiKey) {
-          quotaWarnings.push({
-            source: "gemini",
-            status: 500,
-            message:
-              "GOOGLE_API_KEY is missing. Falling back to Groq text-only description.",
-          });
-          baseJson = await groqDescribeFromText(safeQueryText, quotaWarnings);
-          backendModel = "groq";
-        } else {
-          const genAI = new GoogleGenerativeAI(geminiKey);
-          const model = genAI.getGenerativeModel({
-            model: "gemini-2.5-flash",
-          });
+      // TEXT MODE – auto: Gemini → Groq → DeepSeek → simple fallback
+      const googleAvailable = !!geminiKey;
+      const groqAvailable = !!process.env.GROQ_API_KEY;
+      const deepseekAvailable = !!process.env.DEEPSEEK_API_KEY;
 
-          const basePrompt = `
+      // 1) Try Gemini text if available
+      if (googleAvailable) {
+        const genAI = new GoogleGenerativeAI(geminiKey);
+        const model = genAI.getGenerativeModel({
+          model: "gemini-2.5-flash",
+        });
+
+        const basePrompt = `
 You are ElectroLens, an assistant specialized ONLY in electronics-related items.
 
 FOCUS ONLY on electronics-related items. If the query is not electronics-related,
@@ -957,55 +916,86 @@ Return STRICT JSON ONLY in this shape:
 - Do NOT include any extra fields or text outside the JSON.
 `;
 
-          const parts = [
-            { text: basePrompt },
-            { text: `User typed query: "${safeQueryText}"` },
-          ];
+        const parts = [
+          { text: basePrompt },
+          { text: `User typed query: "${safeQueryText}"` },
+        ];
 
-          try {
-            const geminiResp = await model.generateContent({
-              contents: [{ role: "user", parts }],
-              generationConfig: { responseMimeType: "application/json" },
+        try {
+          const geminiResp = await model.generateContent({
+            contents: [{ role: "user", parts }],
+            generationConfig: { responseMimeType: "application/json" },
+          });
+
+          const rawText = geminiResp.response.text();
+          baseJson = JSON.parse(rawText);
+          baseModel = "gemini";
+        } catch (err) {
+          const msg = String(err || "");
+          const isQuotaError =
+            msg.includes("429") ||
+            msg.includes("You exceeded your current quota") ||
+            msg.includes("Quota exceeded for metric");
+
+          if (isQuotaError) {
+            console.error("Gemini text quota exceeded:", msg);
+            quotaWarnings.push({
+              source: "gemini",
+              status: 429,
+              message:
+                "Gemini free-tier quota exceeded for text. Falling back to other models.",
             });
-
-            const rawText = geminiResp.response.text();
-            baseJson = JSON.parse(rawText);
-            backendModel = preferredModel === "gemini" ? "gemini" : "auto";
-          } catch (err) {
-            const msg = String(err || "");
-            const isQuotaError =
-              msg.includes("429") ||
-              msg.includes("You exceeded your current quota") ||
-              msg.includes("Quota exceeded for metric");
-
-            if (isQuotaError) {
-              console.error("Gemini quota exceeded (text-only):", msg);
-              quotaWarnings.push({
-                source: "gemini",
-                status: 429,
-                message:
-                  "Gemini free-tier quota exceeded for text. Falling back to Groq text description.",
-              });
-
-              baseJson = await groqDescribeFromText(
-                safeQueryText,
-                quotaWarnings
-              );
-              backendModel = "groq";
-            } else {
-              console.error("Gemini text error:", err);
-              return res.status(500).json({
-                error: "Failed to call Gemini generateContent for text.",
-                details: msg,
-                meta: { quotaWarnings, preferredModel: backendModel },
-              });
-            }
+          } else {
+            console.error("Gemini text error:", err);
+            quotaWarnings.push({
+              source: "gemini",
+              status: 500,
+              message:
+                "Gemini text call failed. Falling back to other models if available.",
+            });
           }
         }
       }
+
+      // 2) If Gemini did not produce a baseJson, try Groq
+      if (!baseJson && groqAvailable) {
+        baseJson = await groqDescribeFromText(safeQueryText, quotaWarnings);
+        baseModel = "groq";
+      }
+
+      // 3) If still nothing and DeepSeek is available, try DeepSeek
+      if (!baseJson && deepseekAvailable) {
+        baseJson = await deepseekDescribeFromText(
+          safeQueryText,
+          quotaWarnings
+        );
+        baseModel = "deepseek";
+      }
+
+      // 4) Final safety fallback if absolutely nothing came back
+      if (!baseJson) {
+        const safeName = safeQueryText || "Unknown electronics item";
+        baseJson = {
+          name: safeName,
+          category: "Other",
+          description:
+            "Basic auto-generated entry. No AI model was available on the server. " +
+            "Configure at least one provider (Gemini, Groq, or DeepSeek) for richer content.",
+          typical_uses: [],
+          where_to_buy: [],
+          key_specs: [],
+          datasheet_hint: safeName
+            ? `${safeName} datasheet pdf`
+            : "electronics component datasheet pdf",
+          project_ideas: [],
+          common_mistakes: [],
+          image_search_query: safeName || "electronics component",
+        };
+        baseModel = "fallback";
+      }
     }
 
-    // ========== 2. Web-based images & datasheets, driven by the model's guess ==========
+    // ========== 2. Web-based images & datasheets ==========
 
     const nameOrQuery =
       baseJson.image_search_query ||
@@ -1013,7 +1003,6 @@ Return STRICT JSON ONLY in this shape:
       safeQueryText ||
       "electronics component";
 
-    // Images via Google CSE + Serper fallback
     baseJson.real_image = await fetchRealImageFromGoogle(
       nameOrQuery,
       quotaWarnings
@@ -1027,7 +1016,6 @@ Return STRICT JSON ONLY in this shape:
       quotaWarnings
     );
 
-    // Datasheet + references (Google first, Serper fallback)
     const ds = await fetchDatasheetAndReferences(
       baseJson.name || safeQueryText || "",
       quotaWarnings
@@ -1035,25 +1023,26 @@ Return STRICT JSON ONLY in this shape:
     baseJson.datasheet_url = ds.datasheetUrl;
     baseJson.references = ds.references;
 
-    // Shop links (template)
     baseJson.shop_links = generateShopLinks(
       baseJson.name || safeQueryText || "electronics"
     );
 
-    // ========== 3. Model-specific refinement (encyclopedia text) ==========
+    // ========== 3. Choose a refinement model automatically ==========
 
     let refined = baseJson;
+    let refineModel = null;
 
-    if (backendModel === "deepseek") {
-      refined = await deepseekRefine(baseJson, quotaWarnings);
-    } else if (backendModel === "groq" || backendModel === "auto") {
+    if (process.env.GROQ_API_KEY) {
       refined = await groqRefine(baseJson, quotaWarnings);
-    } else if (backendModel === "gemini") {
-      // Gemini-only: keep baseJson as-is
-      refined = baseJson;
+      refineModel = "groq";
+    } else if (process.env.DEEPSEEK_API_KEY) {
+      refined = await deepseekRefine(baseJson, quotaWarnings);
+      refineModel = "deepseek";
     }
 
-    // Preserve server-generated URLs & links even if refined object drops them
+    const preferredModel = refineModel || baseModel;
+
+    // Preserve server-generated links even if refinement drops them
     const finalJson = {
       ...refined,
       real_image: baseJson.real_image,
@@ -1064,7 +1053,7 @@ Return STRICT JSON ONLY in this shape:
       shop_links: baseJson.shop_links,
       meta: {
         quotaWarnings,
-        preferredModel: backendModel,
+        preferredModel,
       },
     };
 
@@ -1078,7 +1067,7 @@ Return STRICT JSON ONLY in this shape:
     return res.status(500).json({
       error: "Internal server error in electro-lookup.",
       details: err.message || String(err),
-      meta: { quotaWarnings },
+      meta: { quotaWarnings, preferredModel: "fallback" },
     });
   }
 }
