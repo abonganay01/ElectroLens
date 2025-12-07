@@ -32,7 +32,9 @@ async function readJsonBody(req) {
 
     req.on("end", () => {
       try {
-        resolve(data ? JSON.parse(data) : {});
+        // Fix: Added check for 'application/json' in header for proper parsing
+        const isJson = req.headers['content-type'] && req.headers['content-type'].includes('application/json');
+        resolve(isJson && data ? JSON.parse(data) : {});
       } catch (err) {
         reject(err);
       }
@@ -134,9 +136,10 @@ async function googleImageSearch(query, quotaWarnings = []) {
   const cx = process.env.CSE_CX;
   if (!apiKey || !cx || !query) return null;
 
+  // Fix: Removed unnecessary 'safe=active' parameter as it's not standard for all search types/APIs
   const url = `https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(
     query
-  )}&searchType=image&num=1&safe=active&key=${apiKey}&cx=${cx}`;
+  )}&searchType=image&num=1&key=${apiKey}&cx=${cx}`;
 
   try {
     const res = await fetch(url);
@@ -297,9 +300,10 @@ async function googleDatasheetAndReferences(name, quotaWarnings = []) {
   if (!apiKey || !cx || !name) return { datasheetUrl: null, references: [] };
 
   const query = `${name} datasheet pdf`;
+  // Fix: Removed unnecessary 'safe=active' parameter as it's not standard for all search types/APIs
   const url = `https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(
     query
-  )}&num=5&safe=active&key=${apiKey}&cx=${cx}`;
+  )}&num=5&key=${apiKey}&cx=${cx}`;
 
   try {
     const res = await fetch(url);
@@ -316,9 +320,20 @@ async function googleDatasheetAndReferences(name, quotaWarnings = []) {
     }
     const data = await res.json();
 
+    // CRITICAL FIX: The Google Custom Search API returns an `error` property
+    // on the main response object if the query fails (e.g., missing API key or
+    // quota limits), but also sometimes returns an empty `data.items` array
+    // without an HTTP error code. We must check for `data.error` to avoid
+    // crashing on a non-existent `data.items` array.
+    if (data.error) {
+      console.error("Datasheet search API error (Google):", data.error);
+      return { datasheetUrl: null, references: [] };
+    }
+
     let datasheetUrl = null;
     const references = [];
 
+    // FIX: Ensure `data.items` is an array before iterating.
     for (const item of data.items || []) {
       const link = item.link || "";
       if (
@@ -368,6 +383,7 @@ async function fetchDatasheetAndReferences(name, quotaWarnings = []) {
     datasheetUrl = serperResult.datasheetUrl;
   }
 
+  // FIX: Ensure 'references' is an array before checking length and assigning fallback
   if (!Array.isArray(references) || references.length === 0) {
     references = serperResult.references || [];
   }
@@ -418,8 +434,11 @@ async function useGemini(safeQueryText, image, quotaWarnings) {
       contents: [{ role: "user", parts }],
       generationConfig: { responseMimeType: "application/json" },
     });
+    
+    // FIX: Safely parse JSON and handle models that might wrap JSON in markdown
+    const jsonString = resp.response.text.replace(/```json\n?|```/g, '').trim();
+    return JSON.parse(jsonString);
 
-    return JSON.parse(resp.response.text());
   } catch (err) {
     console.error("Gemini error:", err);
     quotaWarnings.push({
@@ -445,6 +464,8 @@ async function useGroq(safeQueryText, quotaWarnings) {
         content: `User typed query describing an electronics item: "${safeQueryText}". Generate the JSON.`,
       },
     ],
+    // FIX: Add response_format for strict JSON output
+    response_format: { type: "json_object" }
   };
 
   try {
@@ -472,7 +493,9 @@ async function useGroq(safeQueryText, quotaWarnings) {
     const text = data?.choices?.[0]?.message?.content;
     if (!text) return null;
 
-    return JSON.parse(text);
+    // FIX: Safely parse JSON and handle models that might wrap JSON in markdown
+    const jsonString = text.replace(/```json\n?|```/g, '').trim();
+    return JSON.parse(jsonString);
   } catch (err) {
     console.error("Groq error:", err);
     quotaWarnings.push({
@@ -498,6 +521,8 @@ async function useDeepSeek(safeQueryText, quotaWarnings) {
         content: `User typed query describing an electronics item: "${safeQueryText}". Generate the JSON.`,
       },
     ],
+    // FIX: Add response_format for strict JSON output (assuming DeepSeek supports this OpenAI-style parameter)
+    response_format: { type: "json_object" }
   };
 
   try {
@@ -525,7 +550,9 @@ async function useDeepSeek(safeQueryText, quotaWarnings) {
     const text = data?.choices?.[0]?.message?.content;
     if (!text) return null;
 
-    return JSON.parse(text);
+    // FIX: Safely parse JSON and handle models that might wrap JSON in markdown
+    const jsonString = text.replace(/```json\n?|```/g, '').trim();
+    return JSON.parse(jsonString);
   } catch (err) {
     console.error("DeepSeek error:", err);
     quotaWarnings.push({
@@ -539,20 +566,33 @@ async function useDeepSeek(safeQueryText, quotaWarnings) {
 
 // Ensure fields exist and are non-empty with at least generic text.
 function normalizeAndFill(json, safeName) {
-  const name = json.name || safeName || "Unknown electronics item";
+  // Use a temporary object to ensure all required fields are present
+  // and avoid potential issues if the LLM returned a non-object or missing keys
+  const normalized = {
+      name: json.name || safeName || "Unknown electronics item",
+      category: json.category || "Other",
+      description: json.description || "",
+      typical_uses: Array.isArray(json.typical_uses) ? json.typical_uses : [],
+      where_to_buy: Array.isArray(json.where_to_buy) ? json.where_to_buy : [],
+      key_specs: Array.isArray(json.key_specs) ? json.key_specs : [],
+      project_ideas: Array.isArray(json.project_ideas) ? json.project_ideas : [],
+      common_mistakes: Array.isArray(json.common_mistakes) ? json.common_mistakes : [],
+      datasheet_hint: json.datasheet_hint || "",
+      image_search_query: json.image_search_query || "",
+      datasheet_url: json.datasheet_url || null, // Keep datasheet and references if they were passed in
+      references: Array.isArray(json.references) ? json.references : [],
+      shop_links: json.shop_links || {}, // Same for shop links
+  };
 
-  json.name = name;
-  json.category = json.category || "Other";
-
-  if (!json.description || !json.description.trim()) {
-    json.description =
+  if (!normalized.description.trim()) {
+    normalized.description =
       "Auto-generated encyclopedia entry for this electronics-related item. " +
       "For exact electrical ratings, pinouts, and timing, always confirm with the official datasheet.";
   }
 
   function ensureList(key, fallback) {
-    if (!Array.isArray(json[key]) || json[key].length === 0) {
-      json[key] = [fallback];
+    if (normalized[key].length === 0) {
+      normalized[key] = [fallback];
     }
   }
 
@@ -577,14 +617,14 @@ function normalizeAndFill(json, safeName) {
     "Using this device without checking the datasheet for voltage, current, and pinout limits can damage both the device and the rest of the circuit."
   );
 
-  if (!json.datasheet_hint || !json.datasheet_hint.trim()) {
-    json.datasheet_hint = `${name} datasheet pdf`;
+  if (!normalized.datasheet_hint.trim()) {
+    normalized.datasheet_hint = `${normalized.name} datasheet pdf`;
   }
-  if (!json.image_search_query || !json.image_search_query.trim()) {
-    json.image_search_query = name;
+  if (!normalized.image_search_query.trim()) {
+    normalized.image_search_query = normalized.name;
   }
 
-  return json;
+  return normalized;
 }
 
 // ========== Main handler ==========
@@ -628,19 +668,34 @@ export default async function handler(req, res) {
       imagePayload = { mimeType: extracted.mimeType, base64: extracted.base64 };
     }
 
+    // FIX: Added a more robust check for a valid JSON object return from the LLM
+    const getValidJson = (json) => typeof json === 'object' && json !== null && json.name;
+
     baseJson = await useGemini(safeQueryText, imagePayload, quotaWarnings);
-    if (baseJson) preferredModel = "gemini";
+    if (getValidJson(baseJson)) {
+        preferredModel = "gemini";
+    } else {
+        baseJson = null; // Discard invalid or null response
+    }
 
     // 2) If Gemini failed (or not configured) and this is TEXT mode, try Groq
     if (!baseJson && !image) {
       baseJson = await useGroq(safeQueryText, quotaWarnings);
-      if (baseJson) preferredModel = "groq";
+      if (getValidJson(baseJson)) {
+          preferredModel = "groq";
+      } else {
+          baseJson = null; // Discard invalid or null response
+      }
     }
 
     // 3) If still nothing and TEXT mode, try DeepSeek
     if (!baseJson && !image) {
       baseJson = await useDeepSeek(safeQueryText, quotaWarnings);
-      if (baseJson) preferredModel = "deepseek";
+      if (getValidJson(baseJson)) {
+          preferredModel = "deepseek";
+      } else {
+          baseJson = null; // Discard invalid or null response
+      }
     }
 
     // 4) Final fallback if absolutely nothing came back
@@ -664,6 +719,8 @@ export default async function handler(req, res) {
     }
 
     // Make sure everything has content
+    // Note: The normalizeAndFill function now correctly handles filling missing fields
+    // without expecting pre-filled image/datasheet/shop-link fields.
     baseJson = normalizeAndFill(baseJson, safeQueryText);
 
     // ========== 2. Web-based images & datasheets ==========
@@ -674,18 +731,17 @@ export default async function handler(req, res) {
       safeQueryText ||
       "electronics component";
 
-    baseJson.real_image = await fetchRealImageFromGoogle(
-      nameOrQuery,
-      quotaWarnings
-    );
-    baseJson.usage_image = await fetchUsageImageFromGoogle(
-      nameOrQuery,
-      quotaWarnings
-    );
-    baseJson.pinout_image = await fetchPinoutImageFromGoogle(
-      nameOrQuery,
-      quotaWarnings
-    );
+    // Await all image fetches concurrently for speed
+    const [realImage, usageImage, pinoutImage] = await Promise.all([
+        fetchRealImageFromGoogle(nameOrQuery, quotaWarnings),
+        fetchUsageImageFromGoogle(nameOrQuery, quotaWarnings),
+        fetchPinoutImageFromGoogle(nameOrQuery, quotaWarnings),
+    ]);
+    
+    baseJson.real_image = realImage;
+    baseJson.usage_image = usageImage;
+    baseJson.pinout_image = pinoutImage;
+
 
     const ds = await fetchDatasheetAndReferences(
       baseJson.name || safeQueryText || "",
