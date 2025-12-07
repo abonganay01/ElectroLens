@@ -1,23 +1,19 @@
 // api/electro-lookup.js
 
-// Uses Node runtime (Vercel serverless / Node, NOT Edge)
+// Node runtime (Vercel Node, not Edge)
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import fetch from "node-fetch";
 
-// NOTE: Add this to avoid maximum body size limit on Vercel Node runtime.
 export const config = {
-  api: {
-    bodyParser: false,
-    // Vercel only allows 4.5MB for this config, but we need manual stream reading anyway.
-  },
+  api: { bodyParser: false },
 };
 
 export const runtime = "nodejs";
 
-// ========== Helpers: request body + image parsing ==========
-
+// ===========================
+// Helpers: request body
+// ===========================
 async function readJsonBody(req) {
-  // Limit to 8MB for multi-modal requests
   const MAX_BYTES = 8 * 1024 * 1024;
 
   return await new Promise((resolve, reject) => {
@@ -36,11 +32,8 @@ async function readJsonBody(req) {
 
     req.on("end", () => {
       try {
-        const contentType = req.headers['content-type'] || '';
-        const isJson = contentType.includes('application/json');
-        
-        // Vercel's node environment usually handles the raw body stream,
-        // so we manually parse the collected string data.
+        const contentType = req.headers["content-type"] || "";
+        const isJson = contentType.includes("application/json");
         resolve(isJson && data ? JSON.parse(data) : {});
       } catch (err) {
         reject(err);
@@ -60,81 +53,337 @@ function extractBase64FromDataUrl(dataUrl) {
   return { mimeType: match[1], base64: match[2] };
 }
 
-// ========== Google Custom Search helpers ==========
+// ===========================
+// Shared prompts
+// ===========================
 
-async function googleImageSearch(query) {
-  const apiKey = process.env.CSE_API_KEY;
-  const cx = process.env.CSE_CX;
-  if (!apiKey || !cx || !query) return null;
+const ELECTROLENS_SCHEMA_PROMPT = `
+You are ElectroLens, an assistant specialized ONLY in electronics.
 
-  const url = `https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(
-    query
-  )}&searchType=image&num=1&key=${apiKey}&cx=${cx}`;
+You must ALWAYS answer with strict JSON only (no extra text), with this exact structure:
+
+{
+  "name": "Specific Part Name",
+  "category": "Category",
+  "description": "Brief description",
+  "typical_uses": [],
+  "where_to_buy": [],
+  "key_specs": [],
+  "datasheet_hint": "",
+  "project_ideas": [],
+  "common_mistakes": [],
+  "image_search_query": "",
+  "schematic_tips": [],
+  "alternatives": [],
+  "code_snippet": ""
+}
+
+Rules:
+- If the object is clearly NOT electronics, set "category" = "Other".
+- Use best technical knowledge. If unsure, make a reasonable guess but stay plausible.
+- Output MUST be valid JSON, no markdown fences.
+`;
+
+function buildTextOnlyUserPrompt(queryText, hasImage) {
+  const q = (queryText || "").trim();
+
+  if (hasImage && q) {
+    return `
+The user uploaded a photo of an electronics component (you CANNOT see the image here)
+and also typed this label or name:
+
+"${q}"
+
+Based ONLY on this label and your electronics knowledge, fill the JSON schema.
+If it is not clearly electronics, use category "Other".
+`;
+  }
+
+  if (hasImage && !q) {
+    return `
+The user uploaded a photo of an electronics component (you CANNOT see the image).
+You don't have any text label. Make a reasonable guess about a generic electronics part
+and fill the JSON schema. If unsure, set category "Other".
+`;
+  }
+
+  // No image, only text query
+  return `
+User typed this query about an electronics part:
+
+"${q}"
+
+Use this to fill the JSON schema. If not clearly electronics, set category "Other".
+`;
+}
+
+// ===========================
+// LLM helpers (fallback chain)
+// ===========================
+
+// 1) Gemini (with image support)
+async function callGemini(image, safeQueryText) {
+  const geminiKey = process.env.GOOGLE_API_KEY;
+  if (!geminiKey) {
+    console.warn("⚠️ GOOGLE_API_KEY missing, skipping Gemini.");
+    return null;
+  }
 
   try {
-    const res = await fetch(url);
-    if (!res.ok) {
-      console.error("Image search HTTP error:", res.status);
-      return null;
+    const genAI = new GoogleGenerativeAI(geminiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+    const parts = [{ text: ELECTROLENS_SCHEMA_PROMPT }];
+
+    if (image) {
+      const extracted = extractBase64FromDataUrl(image);
+      if (!extracted) {
+        console.warn("⚠️ Invalid base64 image format for Gemini, skipping image.");
+      } else {
+        parts.push({
+          inlineData: { mimeType: extracted.mimeType, data: extracted.base64 },
+        });
+      }
+      if (safeQueryText) {
+        parts.push({ text: `User text label: "${safeQueryText}"` });
+      }
+    } else {
+      parts.push({ text: `User typed query: "${safeQueryText}"` });
     }
-    const data = await res.json();
-    
-    if (data.error) {
-        console.error("Google CSE Image API Error:", data.error);
-        return null;
-    }
-    
-    return data.items?.[0]?.link || null;
+
+    const geminiResp = await model.generateContent({
+      contents: [{ role: "user", parts }],
+      generationConfig: { responseMimeType: "application/json" },
+    });
+
+    const raw = geminiResp.response.text; // library’s helper
+    const jsonString = raw.replace(/```json\n?|```/g, "").trim();
+    return JSON.parse(jsonString);
   } catch (err) {
-    console.error("Google image search error:", err);
+    console.error("Gemini failed:", err);
     return null;
   }
 }
 
-async function fetchRealImageFromGoogle(nameOrQuery) {
-  return googleImageSearch(nameOrQuery);
-}
+// 2) DeepSeek (text-only, fallback)
+async function callDeepSeek(hasImage, safeQueryText) {
+  const deepSeekKey = process.env.DEEPSEEK_API_KEY;
+  if (!deepSeekKey) {
+    console.warn("⚠️ DEEPSEEK_API_KEY missing, skipping DeepSeek.");
+    return null;
+  }
 
-async function fetchUsageImageFromGoogle(nameOrQuery) {
-  // try to get an application / example circuit image
-  const q = `${nameOrQuery} application circuit schematic wiring diagram`;
-  return googleImageSearch(q);
-}
+  const url = "https://api.deepseek.com/chat/completions";
+  const userPrompt = buildTextOnlyUserPrompt(safeQueryText, hasImage);
 
-async function fetchPinoutImageFromGoogle(nameOrQuery) {
-  // try to get a pinout diagram
-  const q = `${nameOrQuery} pinout diagram`;
-  return googleImageSearch(q);
-}
-
-async function fetchDatasheetAndReferences(name) {
-  const apiKey = process.env.CSE_API_KEY;
-  const cx = process.env.CSE_CX;
-  if (!apiKey || !cx || !name) return { datasheetUrl: null, references: [] };
-
-  const query = `${name} datasheet pdf`;
-  const url = `https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(
-    query
-  )}&num=5&key=${apiKey}&cx=${cx}`;
+  const body = {
+    model: "deepseek-chat",
+    messages: [
+      { role: "system", content: ELECTROLENS_SCHEMA_PROMPT },
+      { role: "user", content: userPrompt },
+    ],
+    response_format: { type: "json_object" },
+  };
 
   try {
-    const res = await fetch(url);
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${deepSeekKey}`,
+      },
+      body: JSON.stringify(body),
+    });
+
     if (!res.ok) {
-      console.error("Datasheet search HTTP error:", res.status);
+      console.error("DeepSeek HTTP error:", res.status, await res.text());
+      return null;
+    }
+
+    const data = await res.json();
+    const text = data?.choices?.[0]?.message?.content;
+    if (!text) return null;
+
+    const jsonString = text.replace(/```json\n?|```/g, "").trim();
+    return JSON.parse(jsonString);
+  } catch (err) {
+    console.error("DeepSeek failed:", err);
+    return null;
+  }
+}
+
+// 3) Groq (text-only, fallback)
+async function callGroq(hasImage, safeQueryText) {
+  const groqKey = process.env.GROQ_API_KEY;
+  if (!groqKey) {
+    console.warn("⚠️ GROQ_API_KEY missing, skipping Groq.");
+    return null;
+  }
+
+  const url = "https://api.groq.com/openai/v1/chat/completions";
+  const userPrompt = buildTextOnlyUserPrompt(safeQueryText, hasImage);
+
+  const body = {
+    model: "mixtral-8x7b-32768",
+    messages: [
+      { role: "system", content: ELECTROLENS_SCHEMA_PROMPT },
+      { role: "user", content: userPrompt },
+    ],
+    response_format: { type: "json_object" },
+  };
+
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${groqKey}`,
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!res.ok) {
+      console.error("Groq HTTP error:", res.status, await res.text());
+      return null;
+    }
+
+    const data = await res.json();
+    const text = data?.choices?.[0]?.message?.content;
+    if (!text) return null;
+
+    const jsonString = text.replace(/```json\n?|```/g, "").trim();
+    return JSON.parse(jsonString);
+  } catch (err) {
+    console.error("Groq failed:", err);
+    return null;
+  }
+}
+
+// Helper: run the chain Gemini -> DeepSeek -> Groq
+async function getComponentJsonFromLLMs(image, safeQueryText) {
+  // Try Gemini first (multimodal)
+  let baseJson = await callGemini(image, safeQueryText);
+  if (baseJson) {
+    baseJson._provider = "gemini";
+    return baseJson;
+  }
+
+  // Fallback: DeepSeek (text only)
+  baseJson = await callDeepSeek(!!image, safeQueryText);
+  if (baseJson) {
+    baseJson._provider = "deepseek";
+    return baseJson;
+  }
+
+  // Fallback: Groq (text only)
+  baseJson = await callGroq(!!image, safeQueryText);
+  if (baseJson) {
+    baseJson._provider = "groq";
+    return baseJson;
+  }
+
+  return null;
+}
+
+// ===========================
+// Search helpers (CSE + Serper)
+// ===========================
+
+async function serperImageSearch(query) {
+  const apiKey = process.env.SERPER_API_KEY;
+  if (!apiKey || !query) return null;
+
+  try {
+    const res = await fetch("https://google.serper.dev/images", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-API-KEY": apiKey,
+      },
+      body: JSON.stringify({ q: query, num: 1 }),
+    });
+
+    if (!res.ok) {
+      console.error("Serper image HTTP error:", res.status, await res.text());
+      return null;
+    }
+
+    const data = await res.json();
+    const img = data.images?.[0];
+    return img?.imageUrl || img?.thumbnailUrl || null;
+  } catch (err) {
+    console.error("Serper image search error:", err);
+    return null;
+  }
+}
+
+async function googleImageSearch(query) {
+  if (!query) return null;
+
+  const apiKey = process.env.CSE_API_KEY;
+  const cx = process.env.CSE_CX;
+
+  // Primary: Google CSE
+  if (apiKey && cx) {
+    const url = `https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(
+      query
+    )}&searchType=image&num=1&key=${apiKey}&cx=${cx}`;
+
+    try {
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        const link = data.items?.[0]?.link;
+        if (link) return link;
+      } else {
+        console.error("CSE image HTTP error:", res.status);
+      }
+    } catch (err) {
+      console.error("CSE image search error:", err);
+    }
+  }
+
+  // Fallback: Serper
+  return serperImageSearch(query);
+}
+
+async function fetchRealImageFromGoogle(q) {
+  return googleImageSearch(q);
+}
+async function fetchUsageImageFromGoogle(q) {
+  return googleImageSearch(`${q} application circuit schematic wiring diagram`);
+}
+async function fetchPinoutImageFromGoogle(q) {
+  return googleImageSearch(`${q} pinout diagram`);
+}
+
+async function serperDatasheetSearch(name) {
+  const apiKey = process.env.SERPER_API_KEY;
+  if (!apiKey || !name) return { datasheetUrl: null, references: [] };
+
+  try {
+    const res = await fetch("https://google.serper.dev/search", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-API-KEY": apiKey,
+      },
+      body: JSON.stringify({ q: `${name} datasheet pdf`, num: 5 }),
+    });
+
+    if (!res.ok) {
+      console.error("Serper datasheet HTTP error:", res.status, await res.text());
       return { datasheetUrl: null, references: [] };
     }
+
     const data = await res.json();
-    
-    if (data.error) {
-        console.error("Google CSE Datasheet API Error:", data.error);
-        return { datasheetUrl: null, references: [] };
-    }
+    const organic = data.organic || [];
 
     let datasheetUrl = null;
     const references = [];
 
-    for (const item of data.items || []) {
-      const link = item.link || "";
+    for (const item of organic) {
+      const link = item.link || item.url || "";
       if (!datasheetUrl && (link.endsWith(".pdf") || link.toLowerCase().includes("datasheet"))) {
         datasheetUrl = link;
       }
@@ -142,19 +391,63 @@ async function fetchDatasheetAndReferences(name) {
         references.push({
           title: item.title || "",
           url: link,
-          snippet: item.snippet || ""
+          snippet: item.snippet || item.description || "",
         });
       }
     }
 
     return { datasheetUrl, references };
   } catch (err) {
-    console.error("Datasheet search error:", err);
+    console.error("Serper datasheet search error:", err);
     return { datasheetUrl: null, references: [] };
   }
 }
 
-// ========== Shop links ==========
+async function fetchDatasheetAndReferences(name) {
+  if (!name) return { datasheetUrl: null, references: [] };
+
+  const apiKey = process.env.CSE_API_KEY;
+  const cx = process.env.CSE_CX;
+
+  // Primary: Google CSE
+  if (apiKey && cx) {
+    const url = `https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(
+      name + " datasheet pdf"
+    )}&num=5&key=${apiKey}&cx=${cx}`;
+
+    try {
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        let datasheetUrl = null;
+        const references = [];
+
+        for (const item of data.items || []) {
+          const link = item.link || "";
+          if (!datasheetUrl && (link.endsWith(".pdf") || link.toLowerCase().includes("datasheet"))) {
+            datasheetUrl = link;
+          }
+          if (references.length < 5) {
+            references.push({
+              title: item.title || "",
+              url: link,
+              snippet: item.snippet || "",
+            });
+          }
+        }
+
+        return { datasheetUrl, references };
+      } else {
+        console.error("CSE datasheet HTTP error:", res.status);
+      }
+    } catch (err) {
+      console.error("CSE datasheet search error:", err);
+    }
+  }
+
+  // Fallback: Serper
+  return serperDatasheetSearch(name);
+}
 
 function generateShopLinks(nameOrQuery) {
   const q = encodeURIComponent(nameOrQuery || "");
@@ -162,118 +455,13 @@ function generateShopLinks(nameOrQuery) {
     shopee: `https://shopee.ph/search?keyword=${q}`,
     lazada: `https://www.lazada.com.ph/tag/${q}/`,
     amazon: `https://www.amazon.com/s?k=${q}`,
-    aliexpress: `https://www.aliexpress.com/wholesale?SearchText=${q}`
+    aliexpress: `https://www.aliexpress.com/wholesale?SearchText=${q}`,
   };
 }
 
-// ========== Groq refinement: Senior Engineer Persona ==========
-
-async function groqRefine(baseJson) {
-  const groqKey = process.env.GROQ_API_KEY;
-  if (!groqKey) {
-    console.log("⚠️ No GROQ_API_KEY → skipping Groq refinement.");
-    return baseJson;
-  }
-
-  // ENRICHED SYSTEM PROMPT FOR MAXIMUM DETAIL
-  const systemPrompt = `
-You are ElectroLens PRO, a Senior Hardware Engineer and Datasheet Expert.
-
-You receive a JSON object describing an electronics component.
-Your job is to REWRITE and ENRICH the JSON with **extremely detailed, engineering-grade** information.
-
-RULES:
-1. Return JSON ONLY. No markdown outside strings.
-2. Keep existing keys. You may fill empty ones.
-3. **Be Specific**: Don't say "input voltage varies". Say "Input Voltage: 4.5V to 28V (Recommended), 35V (Absolute Max)".
-4. **Markdown allowed in values**: You can use bolding (**text**) inside the string values for emphasis.
-
-FIELDS TO POPULATE:
-
-- "name": Short, precise technical name (e.g., "LM2596S DC-DC Buck Converter Module").
-- "category": "Component", "Microcontroller", "Module", "Tool", "Test Equipment", "Power Supply", or "Other".
-
-- "description": 
-  Write a comprehensive technical overview (4-6 paragraphs).
-  Include: 
-  1. Primary function.
-  2. Internal architecture (e.g., "Uses a Darlington pair output stage").
-  3. Key advantages over predecessors.
-  4. Typical logic levels and communication protocols (I2C, SPI, UART) if applicable.
-
-- "typical_uses": 5-8 concrete scenarios. (e.g., "Step-down regulation for 12V automotive systems", "High-speed switching for motor drivers").
-
-- "where_to_buy": 4-6 bullet points covering local electronics shops and global distributors (Mouser, DigiKey).
-
-- "key_specs": 
-  8-15 bullet points. **MUST BE DETAILED.**
-  Include: Supply Voltage, Logic Level, Max Current, Quiescent Current, Frequency, Operating Temperature, Package Type (DIP, SOP, QFN).
-  *Distinguish between 'Recommended' and 'Absolute Maximum' ratings where possible.*
-
-- "schematic_tips": 
-  3-5 actionable engineering tips for PCB design.
-  (e.g., "Requires a 100uF electrolytic capacitor on input close to pins", "Pull-up resistors of 4.7kΩ required on SDA/SCL lines").
-
-- "alternatives":
-  List 3-5 specific part numbers that perform similar functions (e.g., "Replace with LM2576 for lower frequency", "Use MP1584 for smaller footprint").
-
-- "code_snippet":
-  If this is a sensor, module, or MCU, provide a short, valid **Arduino C++** or **MicroPython** code block demonstrating initialization and basic reading.
-  If not applicable (like a resistor), leave empty string.
-
-- "project_ideas": 3-5 distinct projects with brief "how-it-works" summaries.
-
-- "common_mistakes": 5-8 detailed warnings (e.g., "Connecting VCC to 5V on a 3.3V logic board will destroy the regulator instantly").
-
-- "datasheet_hint": Precise search query.
-
-PRESERVE these fields exactly (do not change URLs):
-"real_image", "usage_image", "pinout_image", "datasheet_url", "shop_links", "references".
-`;
-
-  const body = {
-    model: "mixtral-8x7b-32768",
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: JSON.stringify(baseJson) } 
-    ],
-    response_format: { type: "json_object" } 
-  };
-
-  try {
-    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${groqKey}`
-      },
-      body: JSON.stringify(body)
-    });
-
-    if (!res.ok) {
-        console.error("Groq HTTP Error:", res.status, await res.text());
-        return baseJson;
-    }
-
-    const data = await res.json();
-    const text = data?.choices?.[0]?.message?.content;
-    
-    if (!text) {
-      console.log("⚠️ Groq empty content, falling back to baseJson.");
-      return baseJson;
-    }
-    
-    const jsonString = text.replace(/```json\n?|```/g, '').trim();
-    return JSON.parse(jsonString);
-    
-  } catch (err) {
-    console.error("Groq refinement failed:", err);
-    return baseJson;
-  }
-}
-
-// ========== Main handler ==========
-
+// ===========================
+// MAIN HANDLER
+// ===========================
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
@@ -291,77 +479,12 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Provide an image or queryText." });
     }
 
-    const geminiKey = process.env.GOOGLE_API_KEY;
-    if (!geminiKey) {
-      console.error("Missing GOOGLE_API_KEY");
-      return res.status(500).json({
-        error: "Server misconfigured: GOOGLE_API_KEY missing."
-      });
-    }
-
-    const genAI = new GoogleGenerativeAI(geminiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-
-    // EXPANDED BASE PROMPT
-    const basePrompt = `
-You are ElectroLens, an assistant specialized ONLY in electronics.
-
-Analyze the image or text. Return strict JSON.
-
-Structure:
-{
-  "name": "Specific Part Name",
-  "category": "Category",
-  "description": "Brief description",
-  "typical_uses": ["use 1", "use 2"],
-  "where_to_buy": [],
-  "key_specs": ["spec 1", "spec 2"],
-  "datasheet_hint": "search query",
-  "project_ideas": [],
-  "common_mistakes": [],
-  "image_search_query": "search query for google images",
-  "schematic_tips": [],
-  "alternatives": [],
-  "code_snippet": ""
-}
-
-If the object is clearly NOT electronics, mark category as "Other".
-`;
-
-    const parts = [{ text: basePrompt }];
-
-    let imagePayload = null;
-    if (image) {
-      const extracted = extractBase64FromDataUrl(image);
-      if (!extracted) {
-        return res.status(400).json({
-          error: "Image must be a base64 data URL like data:image/jpeg;base64,..."
-        });
-      }
-      imagePayload = { mimeType: extracted.mimeType, data: extracted.base64 };
-      parts.push({ inlineData: imagePayload });
-      
-      if (safeQueryText) {
-        parts.push({ text: `User text label: "${safeQueryText}"` });
-      }
-    } else {
-      parts.push({ text: `User typed query: "${safeQueryText}"` });
-    }
-
-    const geminiResp = await model.generateContent({
-      contents: [{ role: "user", parts }],
-      generationConfig: { responseMimeType: "application/json" }
-    });
-
-    let baseJson;
-    try {
-        const jsonString = geminiResp.response.text.replace(/```json\n?|```/g, '').trim();
-        baseJson = JSON.parse(jsonString);
-    } catch (err) {
-      console.error("Failed to parse Gemini JSON:", geminiResp.response.text);
+    // ===== LLM chain: Gemini -> DeepSeek -> Groq =====
+    const baseJson = await getComponentJsonFromLLMs(image, safeQueryText);
+    if (!baseJson) {
       return res
         .status(500)
-        .json({ error: "Failed to parse Gemini response as JSON." });
+        .json({ error: "All AI providers failed to return valid JSON." });
     }
 
     const nameOrQuery =
@@ -370,50 +493,35 @@ If the object is clearly NOT electronics, mark category as "Other".
       safeQueryText ||
       "electronics component";
 
-    // Concurrent image fetching
+    // ===== Image searches (CSE → Serper) =====
     const [realImage, usageImage, pinoutImage] = await Promise.all([
-        fetchRealImageFromGoogle(nameOrQuery),
-        fetchUsageImageFromGoogle(nameOrQuery),
-        fetchPinoutImageFromGoogle(nameOrQuery),
+      fetchRealImageFromGoogle(nameOrQuery),
+      fetchUsageImageFromGoogle(nameOrQuery),
+      fetchPinoutImageFromGoogle(nameOrQuery),
     ]);
-    
+
     baseJson.real_image = realImage;
     baseJson.usage_image = usageImage;
     baseJson.pinout_image = pinoutImage;
 
+    // ===== Datasheet + references (CSE → Serper) =====
     const ds = await fetchDatasheetAndReferences(
       baseJson.name || safeQueryText || ""
     );
     baseJson.datasheet_url = ds.datasheetUrl;
     baseJson.references = ds.references;
 
+    // ===== Shop links =====
     baseJson.shop_links = generateShopLinks(
       baseJson.name || safeQueryText || "electronics"
     );
 
-    // Call refined Groq logic (with the new detailed prompt)
-    const refined = await groqRefine(baseJson);
-
-    // Merge and return
-    const finalJson = {
-      ...refined,
-      real_image: baseJson.real_image,
-      usage_image: baseJson.usage_image,
-      pinout_image: baseJson.pinout_image,
-      datasheet_url: baseJson.datasheet_url,
-      references: baseJson.references,
-      shop_links: baseJson.shop_links
-    };
-
-    if (baseJson.official_store && !finalJson.official_store) {
-      finalJson.official_store = baseJson.official_store;
-    }
-
-    return res.status(200).json(finalJson);
+    return res.status(200).json(baseJson);
   } catch (err) {
     console.error("Error in /api/electro-lookup:", err);
-    return res
-      .status(500)
-      .json({ error: "Internal server error.", details: err.message || String(err) });
+    return res.status(500).json({
+      error: "Internal server error.",
+      details: err.message || String(err),
+    });
   }
 }
