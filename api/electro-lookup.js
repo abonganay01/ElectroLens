@@ -514,13 +514,13 @@ async function groqDescribeFromText(queryText, quotaWarnings = []) {
   const groqKey = process.env.GROQ_API_KEY;
   const safeName = queryText || "Unknown electronics item";
 
+  // Base fallback JSON that we can always return
   const fallbackJson = {
     name: safeName,
     category: "Other",
     description:
-      "Text-only fallback entry. Either the primary model was unavailable " +
-      "or Groq returned an error, so this is a minimal placeholder. " +
-      "Use the datasheet and external links for exact specifications.",
+      "Generic auto-generated encyclopedia entry based on the item name. " +
+      "For precise electrical values, pinouts, and absolute ratings, always confirm using the official datasheet and manufacturer reference designs.",
     typical_uses: [],
     where_to_buy: [],
     key_specs: [],
@@ -532,12 +532,13 @@ async function groqDescribeFromText(queryText, quotaWarnings = []) {
     image_search_query: safeName || "electronics component",
   };
 
+  // If there is no Groq API key, just return the fallback JSON
   if (!groqKey) {
     quotaWarnings.push({
       source: "groq_text_fallback",
       status: 500,
       message:
-        "GROQ_API_KEY not set. Using simple text-only fallback for manual search.",
+        "GROQ_API_KEY not set. Using a simple generic entry. Set GROQ_API_KEY or switch to another model in the UI.",
     });
     return fallbackJson;
   }
@@ -588,23 +589,14 @@ Return STRICT JSON ONLY in this shape:
     if (!res.ok) {
       const errText = await res.text();
       console.error("Groq text fallback HTTP error:", res.status, errText);
-      if (isQuotaStatus(res.status)) {
-        quotaWarnings.push({
-          source: "groq_text_fallback",
-          status: res.status,
-          message:
-            "Groq text-only quota or billing limit reached. Using simple fallback instead.",
-        });
-      } else {
-        quotaWarnings.push({
-          source: "groq_text_fallback",
-          status: res.status,
-          message:
-            "Groq text-only returned HTTP " +
-            res.status +
-            ". Using simple fallback instead.",
-        });
-      }
+      quotaWarnings.push({
+        source: "groq_text_fallback",
+        status: res.status,
+        message:
+          "Groq text endpoint returned HTTP " +
+          res.status +
+          ". Using a generic entry instead. Check GROQ_API_KEY or quota.",
+      });
       return fallbackJson;
     }
 
@@ -616,7 +608,7 @@ Return STRICT JSON ONLY in this shape:
         source: "groq_text_fallback",
         status: 500,
         message:
-          "Groq text fallback returned empty content. Using simple fallback instead.",
+          "Groq text endpoint returned empty content. Using a generic entry instead.",
       });
       return fallbackJson;
     }
@@ -628,11 +620,12 @@ Return STRICT JSON ONLY in this shape:
       source: "groq_text_fallback",
       status: 500,
       message:
-        "Groq text fallback threw an error. Using simple fallback instead.",
+        "Groq text fallback threw an error. Using a generic entry instead.",
     });
     return fallbackJson;
   }
 }
+
 
 // ========== DeepSeek text-only description ==========
 
@@ -644,9 +637,8 @@ async function deepseekDescribeFromText(queryText, quotaWarnings = []) {
     name: safeName,
     category: "Other",
     description:
-      "Text-only fallback entry. Either DeepSeek was unavailable " +
-      "or returned an error, so this is a minimal placeholder. " +
-      "Use the datasheet and external links for exact specifications.",
+      "Generic auto-generated encyclopedia entry based on the item name. " +
+      "For accurate ratings, pinouts, and timing details, always verify using the official datasheet and hardware documentation.",
     typical_uses: [],
     where_to_buy: [],
     key_specs: [],
@@ -663,7 +655,7 @@ async function deepseekDescribeFromText(queryText, quotaWarnings = []) {
       source: "deepseek_text_fallback",
       status: 500,
       message:
-        "DEEPSEEK_API_KEY not set. Using simple text-only fallback for manual search.",
+        "DEEPSEEK_API_KEY not set. Using a simple generic entry. Set DEEPSEEK_API_KEY or switch to another model in the UI.",
     });
     return fallbackJson;
   }
@@ -714,23 +706,14 @@ Return STRICT JSON ONLY in this exact shape:
     if (!res.ok) {
       const errText = await res.text();
       console.error("DeepSeek text HTTP error:", res.status, errText);
-      if (isQuotaStatus(res.status)) {
-        quotaWarnings.push({
-          source: "deepseek_text_fallback",
-          status: res.status,
-          message:
-            "DeepSeek text quota or billing limit reached. Using simple fallback instead.",
-        });
-      } else {
-        quotaWarnings.push({
-          source: "deepseek_text_fallback",
-          status: res.status,
-          message:
-            "DeepSeek text returned HTTP " +
-            res.status +
-            ". Using simple fallback instead.",
-        });
-      }
+      quotaWarnings.push({
+        source: "deepseek_text_fallback",
+        status: res.status,
+        message:
+          "DeepSeek text endpoint returned HTTP " +
+          res.status +
+          ". Using a generic entry instead. Check DEEPSEEK_API_KEY or quota.",
+      });
       return fallbackJson;
     }
 
@@ -742,7 +725,7 @@ Return STRICT JSON ONLY in this exact shape:
         source: "deepseek_text_fallback",
         status: 500,
         message:
-          "DeepSeek text returned empty content. Using simple fallback instead.",
+          "DeepSeek text endpoint returned empty content. Using a generic entry instead.",
       });
       return fallbackJson;
     }
@@ -754,11 +737,12 @@ Return STRICT JSON ONLY in this exact shape:
       source: "deepseek_text_fallback",
       status: 500,
       message:
-        "DeepSeek text threw an error. Using simple fallback instead.",
+        "DeepSeek text threw an error. Using a generic entry instead.",
     });
     return fallbackJson;
   }
 }
+
 
 // ========== Main handler ==========
 
