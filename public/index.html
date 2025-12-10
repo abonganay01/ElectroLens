@@ -16,7 +16,7 @@
         /* Dark Mode (Default) */
         --bg-body: #09090b;
         --bg-panel: #18181b;
-        --bg-panel-translucent: rgba(24, 24, 27, 0.95); /* Increased opacity for readability */
+        --bg-panel-translucent: rgba(24, 24, 27, 0.85);
         --bg-element: #27272a;
         --bg-element-hover: #3f3f46;
         
@@ -50,7 +50,7 @@
     :root[data-theme="light"] {
         --bg-body: #f1f5f9;
         --bg-panel: #ffffff;
-        --bg-panel-translucent: rgba(255, 255, 255, 0.95);
+        --bg-panel-translucent: rgba(255, 255, 255, 0.9);
         --bg-element: #f8fafc;
         --bg-element-hover: #e2e8f0;
         
@@ -75,7 +75,7 @@
     /* -------------------------------------- */
     /* RESET & BASE */
     /* -------------------------------------- */
-    * { box-sizing: border-box; margin: 0; padding: 0; outline: none; -webkit-tap-highlight-color: transparent; }
+    * { box-sizing: border-box; margin: 0; padding: 0; outline: none; }
 
     body {
         font-family: var(--font-sans);
@@ -85,7 +85,7 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        padding: 1.5rem;
+        padding: 2rem 1.5rem;
         transition: background-color 0.3s ease, color 0.3s ease;
     }
 
@@ -99,13 +99,12 @@
         background-size: 24px 24px;
         opacity: 0.2;
         mask-image: radial-gradient(circle at center, black 40%, transparent 100%);
-        pointer-events: none;
     }
 
     /* Custom Scrollbar */
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
     ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; border: 2px solid var(--bg-panel); }
     ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
     .shell {
@@ -128,47 +127,44 @@
 
     .brand {
         display: flex;
-        flex-direction: column;
-        align-items: center; /* Changed from flex-start to center for better alignment */
-        justify-content: center;
-        gap: 0.25rem;
-        text-align: center;
+        align-items: center;
+        gap: 1rem;
     }
 
-    /* Logo handling: Optimized for size and mobile responsiveness */
-    .brand-logo {
-        display: block;
-        width: auto;
-        height: 54px; /* Increased from 38px for better visibility */
-        max-width: 100%; /* Prevents overflow on very small screens */
-        object-fit: contain;
-        filter: none;
-        margin-bottom: 2px;
-        transition: height 0.3s ease; /* Smooth resizing */
+    .logo-box {
+        width: 42px;
+        height: 42px;
+        background: var(--primary);
+        border-radius: var(--radius-md);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        color: white;
+        box-shadow: var(--shadow-glow);
+        transition: transform 0.2s;
     }
     
-    .brand-title-text {
-        font-size: 1.5rem;
-        font-weight: 800;
-        letter-spacing: -0.03em;
-        line-height: 1;
-        background: linear-gradient(135deg, var(--text-main), var(--text-muted));
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+    .brand:hover .logo-box { transform: scale(1.05) rotate(5deg); }
+
+    .brand-info h1 {
+        font-size: 1.25rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        line-height: 1.1;
+        color: var(--text-main);
     }
 
-    .brand-subtitle {
+    .brand-info p {
         font-size: 0.8rem;
-        color: var(--primary);
-        font-weight: 600;
-        letter-spacing: 0.05em;
-        text-transform: uppercase;
+        color: var(--text-muted);
+        font-weight: 500;
     }
 
     .header-actions {
         display: flex;
         align-items: center;
-        gap: 1rem;
+        gap: 1.5rem;
     }
 
     .nav-link {
@@ -177,8 +173,8 @@
         text-decoration: none;
         font-weight: 500;
         transition: color 0.2s;
-        cursor: pointer;
         display: none;
+        cursor: pointer;
     }
     .nav-link:hover { color: var(--primary); }
     @media (min-width: 768px) { .nav-link { display: block; } }
@@ -187,8 +183,8 @@
         background: var(--bg-element);
         border: 1px solid var(--border);
         color: var(--text-muted);
-        width: 36px;
-        height: 36px;
+        width: 40px;
+        height: 40px;
         border-radius: 50%;
         display: flex;
         align-items: center;
@@ -204,12 +200,6 @@
         transform: rotate(15deg);
     }
 
-    .sr-only {
-        position: absolute !important;
-        width: 1px; height: 1px; padding: 0; margin: -1px;
-        overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
-    }
-
     /* -------------------------------------- */
     /* MAIN GRID LAYOUT */
     /* -------------------------------------- */
@@ -217,36 +207,13 @@
         display: grid;
         grid-template-columns: 1fr;
         gap: 1.5rem;
-        /* No fixed min-height to allow content to dictate height on mobile */
+        min-height: 600px;
     }
 
     @media (min-width: 1024px) {
         .dashboard-grid {
             grid-template-columns: 380px 1fr;
             align-items: start;
-            /* Make the grid take up viewport space minus header/padding */
-            height: calc(100vh - 120px); 
-            min-height: 600px; 
-            overflow: hidden; /* Prevent body scroll, use inner scroll */
-        }
-        
-        /* Sticky Left Panel Logic */
-        .card.left-panel {
-            height: 100%;
-            overflow-y: auto;
-        }
-
-        /* Scrollable Right Panel Logic */
-        .card.right-panel {
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden; /* Contain inner scroll */
-        }
-        
-        .ency-content {
-            overflow-y: auto; /* Scroll ONLY the content area */
-            padding-right: 8px; /* Room for scrollbar */
         }
     }
 
@@ -264,18 +231,15 @@
         flex-direction: column;
         gap: 1.25rem;
         box-shadow: var(--shadow-card);
+        height: 100%;
         position: relative;
         transition: border-color 0.3s ease, background-color 0.3s ease;
     }
-    
-    /* Ensure content doesn't break layout */
-    .card > * { min-width: 0; }
 
     .card-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        flex-shrink: 0; /* Prevent header squishing */
     }
 
     .card-title {
@@ -308,7 +272,6 @@
         border-radius: var(--radius-lg);
         gap: 4px;
         border: 1px solid var(--border);
-        flex-shrink: 0;
     }
 
     .mode-btn {
@@ -363,6 +326,30 @@
         pointer-events: none;
     }
 
+    /* Reticle animation */
+    .reticle {
+        width: 60%;
+        height: 60%;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: var(--radius-md);
+        position: relative;
+        box-shadow: 0 0 0 999px rgba(0, 0, 0, 0.5);
+    }
+    
+    .reticle::after, .reticle::before, 
+    .reticle-corner-bl, .reticle-corner-tr {
+        content: "";
+        position: absolute;
+        width: 20px;
+        height: 20px;
+        border-color: var(--primary);
+        border-style: solid;
+        transition: all 0.3s;
+    }
+    
+    .reticle::before { top: -2px; left: -2px; border-width: 3px 0 0 3px; border-radius: 4px 0 0 0; }
+    .reticle::after { bottom: -2px; right: -2px; border-width: 0 3px 3px 0; border-radius: 0 0 4px 0; }
+    
     /* Controls */
     .control-row {
         display: flex;
@@ -385,13 +372,30 @@
         flex: 2;
         background: linear-gradient(135deg, var(--primary), var(--primary-hover));
         color: white;
-        box-shadow: 0 4px 15px var(--primary-glow);
+        box-shadow: 0 4px 15px var(--primary-glow), inset 0 1px 0 rgba(255,255,255,0.2);
+        text-shadow: 0 1px 2px rgba(0,0,0,0.1);
         position: relative;
         overflow: hidden;
     }
     
+    .btn-primary::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+        transition: 0.5s;
+    }
+
+    .btn-primary:hover:not(:disabled)::after {
+        left: 100%;
+    }
+
     .btn-primary:hover:not(:disabled) { 
         transform: translateY(-2px); 
+        box-shadow: 0 8px 25px var(--primary-glow);
         filter: brightness(1.1);
     }
     .btn-primary:active:not(:disabled) { transform: translateY(0); }
@@ -402,8 +406,10 @@
         cursor: not-allowed; 
         box-shadow: none; 
         transform: none;
+        background-image: none;
     }
 
+    /* Updated Camera Toggle Button Design */
     .btn-camera-toggle {
         display: inline-flex;
         align-items: center;
@@ -414,24 +420,44 @@
         font-size: 0.9rem;
         font-weight: 600;
         cursor: pointer;
-        transition: all 0.2s;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         border: 1px solid transparent;
         flex: 1;
     }
 
+    /* Start State (Green) */
     .btn-camera-toggle.start {
-        background: rgba(16, 185, 129, 0.1);
+        background: rgba(16, 185, 129, 0.1); /* Emerald-500 tint */
         color: #10b981;
         border-color: rgba(16, 185, 129, 0.3);
     }
-    .btn-camera-toggle.start:hover { background: rgba(16, 185, 129, 0.15); }
+    .btn-camera-toggle.start:hover {
+        background: rgba(16, 185, 129, 0.15);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+    }
 
+    /* Stop State (Red) */
     .btn-camera-toggle.stop {
-        background: rgba(239, 68, 68, 0.1);
+        background: rgba(239, 68, 68, 0.1); /* Red-500 tint */
         color: #ef4444;
         border-color: rgba(239, 68, 68, 0.3);
     }
-    .btn-camera-toggle.stop:hover { background: rgba(239, 68, 68, 0.15); }
+    .btn-camera-toggle.stop:hover {
+        background: rgba(239, 68, 68, 0.15);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15);
+    }
+
+    .btn-secondary {
+        background: var(--bg-element);
+        color: var(--text-main);
+        border: 1px solid var(--border);
+    }
+    .btn-secondary:hover { 
+        background: var(--bg-element-hover);
+        border-color: var(--text-muted); 
+    }
 
     /* Upload Zone */
     .upload-zone {
@@ -476,6 +502,7 @@
         border-color: var(--primary); 
         box-shadow: 0 0 0 3px var(--primary-dim);
     }
+    .text-input::placeholder { color: var(--text-dim); }
 
     /* -------------------------------------- */
     /* RIGHT COLUMN: ENCYCLOPEDIA */
@@ -484,7 +511,6 @@
         border-bottom: 1px solid var(--border);
         padding-bottom: 1.25rem;
         margin-bottom: 0.5rem;
-        flex-shrink: 0;
     }
 
     .chip-container {
@@ -523,10 +549,21 @@
         align-items: center;
         gap: 0.5rem;
     }
-    .part-category::before { content: "#"; color: var(--primary); }
+    .part-category::before {
+        content: "#";
+        color: var(--primary);
+    }
 
-    /* Data Sections */
-    .data-section { margin-bottom: 2rem; }
+    /* Scroll Area */
+    .ency-content {
+        flex: 1;
+        overflow-y: auto;
+        padding-right: 0.5rem;
+    }
+
+    .data-section {
+        margin-bottom: 2rem;
+    }
 
     .section-label {
         font-size: 0.7rem;
@@ -540,7 +577,11 @@
         gap: 0.5rem;
     }
     .section-label::after {
-        content: ""; flex: 1; height: 1px; background: var(--border); opacity: 0.5;
+        content: "";
+        flex: 1;
+        height: 1px;
+        background: var(--border);
+        opacity: 0.5;
     }
 
     .section-body {
@@ -549,6 +590,7 @@
         color: var(--text-muted);
     }
     
+    .section-body p { margin-bottom: 0.75rem; }
     .section-body ul { list-style: none; padding: 0; display: grid; gap: 0.5rem; }
     .section-body li { 
         position: relative; 
@@ -558,14 +600,16 @@
     }
     .section-body li::before {
         content: "•";
-        position: absolute; left: 0.25rem;
-        color: var(--primary); font-weight: bold;
+        position: absolute;
+        left: 0.25rem;
+        color: var(--primary);
+        font-weight: bold;
     }
 
-    /* Images Grid - Improved Response */
+    /* Images Grid */
     .ref-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+        grid-template-columns: repeat(3, 1fr);
         gap: 0.75rem;
         margin-top: 1rem;
     }
@@ -586,18 +630,23 @@
     .ref-image-box {
         aspect-ratio: 1;
         width: 100%;
-        background: #fff; 
+        background: #fff; /* White bg for components looks cleaner */
         border-radius: var(--radius-sm);
         overflow: hidden;
         display: flex;
         align-items: center;
         justify-content: center;
+        position: relative;
     }
-    
+    /* Dark mode toggle for image background if desired, keeping white for clarity of schematics */
+    :root[data-theme="dark"] .ref-image-box { background: #fff; } 
+    :root[data-theme="light"] .ref-image-box { background: #f1f5f9; }
+
     .ref-item img {
         max-width: 100%;
         max-height: 100%;
         object-fit: contain;
+        display: block;
     }
 
     .ref-caption {
@@ -607,10 +656,15 @@
         color: var(--text-dim);
         font-weight: 500;
         text-transform: uppercase;
+        letter-spacing: 0.05em;
     }
 
     /* Links */
-    .link-group { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .link-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
 
     .chip-link {
         font-size: 0.8rem;
@@ -630,6 +684,7 @@
         border-color: var(--primary);
         color: var(--primary);
         background: var(--primary-dim);
+        transform: translateY(-1px);
     }
 
     /* Footer / Status */
@@ -643,20 +698,21 @@
         font-size: 0.75rem;
         color: var(--text-dim);
         font-family: var(--font-mono);
-        flex-shrink: 0;
     }
 
     .loader {
-        width: 18px; height: 18px;
+        width: 18px;
+        height: 18px;
         border: 2px solid var(--border);
         border-top-color: var(--primary);
         border-radius: 50%;
         animation: spin 0.8s linear infinite;
         display: none;
     }
+    
     @keyframes spin { 100% { transform: rotate(360deg); } }
 
-    /* Modal */
+    /* Modal Styles */
     .modal {
         display: none;
         position: fixed;
@@ -677,23 +733,47 @@
         width: 100%;
         padding: 1.5rem;
         box-shadow: var(--shadow-card);
+        position: relative;
         animation: slideUp 0.3s ease;
     }
     @keyframes slideUp {
         from { transform: translateY(20px); opacity: 0; }
         to { transform: translateY(0); opacity: 1; }
     }
-    
     .modal-header {
-        display: flex; justify-content: space-between; align-items: center;
-        margin-bottom: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 0.5rem;
+    }
+    .modal-header h3 {
+        color: var(--text-main);
+        font-size: 1.1rem;
+        font-weight: 600;
     }
     .close-modal {
-        background: none; border: none; font-size: 1.5rem; color: var(--text-muted); cursor: pointer;
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        color: var(--text-muted);
+        cursor: pointer;
+        padding: 0 0.5rem;
     }
-    
+    .close-modal:hover { color: var(--text-main); }
+    .modal-body h4 { margin: 1rem 0 0.5rem; color: var(--text-main); font-size: 0.95rem; font-weight: 600; }
+    .modal-body p { font-size: 0.9rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 0.5rem; }
+    .modal-body ul { padding-left: 1.2rem; margin-bottom: 1rem; color: var(--text-muted); font-size: 0.9rem; line-height: 1.5; }
+    .modal-body li { margin-bottom: 0.4rem; }
+    .modal-body strong { color: var(--text-main); }
+
     .site-footer {
-        font-size: 0.75rem; color: var(--text-dim); text-align: center; margin-top: auto; padding-top: 1rem;
+        font-size: 0.75rem;
+        color: var(--text-dim);
+        text-align: center;
+        margin-top: auto;
+        padding-top: 1rem;
     }
 
     /* Mobile adjustments */
@@ -704,13 +784,11 @@
         .part-name { font-size: 1.75rem; }
         .mode-switcher { overflow-x: auto; }
         .ref-grid { grid-template-columns: repeat(3, 1fr); }
-        .brand-logo { height: 42px; } /* Slightly smaller for tablets/mobile */
     }
     
     @media (max-width: 480px) {
         .ref-grid { grid-template-columns: 1fr; } 
         .ref-image-box { aspect-ratio: 16/9; }
-        .brand-logo { height: 36px; } /* Optimized for small phones */
     }
   </style>
 </head>
@@ -720,18 +798,18 @@
   <!-- HEADER -->
   <header class="site-header">
     <div class="brand">
-        <!-- Logo Image inserted here -->
-        <img src="/assets/ELECTRO.png" alt="ElectroLens" class="brand-logo" />
-        <div class="brand-info" aria-hidden="true">
-            <p class="brand-subtitle">AI Component Analyzer</p>
-        </div>
+      <div class="logo-box">⚡</div>
+      <div class="brand-info">
+        <h1>ElectroLens</h1>
+        <p>AI Component Analyzer</p>
+      </div>
     </div>
-
     <div class="header-actions">
       <a id="aboutLink" class="nav-link">About</a>
       <button class="theme-toggle" id="themeToggle" title="Toggle Theme">
-        <!-- Icons handled by JS toggling display -->
+        <!-- Sun Icon -->
         <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+        <!-- Moon Icon -->
         <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
       </button>
     </div>
@@ -740,7 +818,7 @@
   <div class="dashboard-grid">
     
     <!-- LEFT PANEL: INPUT -->
-    <section class="card left-panel">
+    <section class="card">
       <div class="card-header">
         <div class="card-title">Input Source</div>
         <div class="loader" id="cameraLoader"></div>
@@ -759,7 +837,7 @@
           <img id="cameraCapturePreview" class="viewport-img" style="display:none;" />
           
           <div class="viewport-overlay" id="camOverlay">
-             <!-- Reticle removed -->
+            <!-- Clean viewfinder: No reticle or text -->
           </div>
         </div>
         <div style="margin-top:1rem; display: flex; justify-content: space-between; align-items: center;">
@@ -768,9 +846,10 @@
         <div class="control-row">
             <button class="btn-camera-toggle start" id="toggleCameraBtn">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-                Start
+                Start Camera
             </button>
             <button class="btn-primary" id="analyzeCameraBtn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                 Scan & Analyze
             </button>
         </div>
@@ -797,7 +876,7 @@
         <div style="height: 280px; display: flex; flex-direction: column; justify-content: center;">
             <label style="font-size:0.8rem; color:var(--text-muted); margin-bottom:0.5rem; font-weight:600;">ENTER PART NUMBER OR NAME</label>
             <div class="input-group">
-                <input type="text" id="manualInput" class="text-input" placeholder="e.g. ESP32, LM7805..." />
+                <input type="text" id="manualInput" class="text-input" placeholder="e.g. ESP32, LM7805, 10k Resistor..." />
                 <button class="btn-primary" id="manualSearchBtn" style="flex:0; padding:0 1.5rem;">Go</button>
             </div>
             <div style="margin-top:1.5rem; padding:1rem; background:var(--bg-element); border-radius:var(--radius-md); border:1px solid var(--border);">
@@ -810,11 +889,12 @@
 
       <!-- Hidden Canvas for capture -->
       <canvas id="captureCanvas" style="display:none;"></canvas>
+
     </section>
 
 
     <!-- RIGHT PANEL: OUTPUT -->
-    <section class="card right-panel">
+    <section class="card">
       <div class="card-header">
         <div class="card-title">Analysis Protocol</div>
         <div class="loader" id="globalLoader"></div>
@@ -856,23 +936,30 @@
             </div>
 
             <div class="data-section">
+                <div class="section-label">Common Mistakes</div>
+                <div class="section-body" id="commonMistakes">
+                    <p class="text-muted">–</p>
+                </div>
+            </div>
+
+            <div class="data-section">
                 <div class="section-label">Visual Verification</div>
                 <div class="ref-grid">
                     <div class="ref-item">
                         <div class="ref-image-box">
-                            <span style="font-size:2rem;">📷</span>
+                            <img id="refImage" alt="" style="display:none">
                         </div>
                         <div class="ref-caption">Reference</div>
                     </div>
                     <div class="ref-item">
                         <div class="ref-image-box">
-                             <span style="font-size:2rem;">⚡</span>
+                            <img id="pinoutImage" alt="" style="display:none">
                         </div>
                         <div class="ref-caption">Pinout</div>
                     </div>
                     <div class="ref-item">
                         <div class="ref-image-box">
-                             <span style="font-size:2rem;">🔌</span>
+                            <img id="usageImage" alt="" style="display:none">
                         </div>
                         <div class="ref-caption">Circuit</div>
                     </div>
@@ -883,6 +970,8 @@
                 <div class="section-label">External Resources</div>
                 <div class="section-body" id="datasheetHint"></div>
                 <div class="link-group" id="referencesSection" style="margin-top:0.75rem;"></div>
+                <div class="section-label" style="margin-top:1.5rem;">Purchase Links</div>
+                <div class="link-group" id="shopLinks" style="width:100%;"></div>
             </div>
 
         </div>
@@ -908,14 +997,26 @@
       <h3>About ElectroLens</h3>
       <button class="close-modal">&times;</button>
     </div>
-    <div style="color: var(--text-muted); line-height: 1.6;">
+    <div class="modal-body">
       <p><strong>ElectroLens</strong> is an intelligent encyclopedia for electronics enthusiasts, engineers, and makers, designed to identify components instantly.</p>
-      <br>
+      
       <h4>How it works</h4>
-      <ul style="padding-left: 1.2rem; margin-top: 0.5rem;">
+      <ul>
         <li><strong>Vision Analysis:</strong> We use Google's <strong>Gemini Vision</strong> model to identify components from your camera or uploaded images.</li>
         <li><strong>Data Enrichment:</strong> Once identified, the system intelligently searches for datasheets, pinout diagrams, and shopping links.</li>
+        <li><strong>Privacy:</strong> Images are processed for analysis and not permanently stored.</li>
       </ul>
+      
+      <h4>Tech Stack</h4>
+      <ul>
+        <li>Frontend: HTML5, CSS3, Vanilla JS</li>
+        <li>AI Model: Gemini 1.5 Flash (Google DeepMind)</li>
+        <li>Search: Google Custom Search API & Serper</li>
+      </ul>
+
+      <p style="font-size:0.8rem; margin-top:1.5rem; color:var(--text-dim); border-top:1px solid var(--border); padding-top:1rem;">
+        <strong>Disclaimer:</strong> AI outputs can be inaccurate. Always verify pinouts, voltage ratings, and safety instructions with official manufacturer datasheets before powering up circuits.
+      </p>
     </div>
   </div>
 </div>
@@ -961,6 +1062,7 @@
   }
   
   const hideModal = () => aboutModal.classList.remove('active');
+  
   if(closeModal) closeModal.addEventListener('click', hideModal);
   
   aboutModal.addEventListener('click', (e) => {
@@ -1008,7 +1110,12 @@
     desc: document.getElementById("description"),
     specs: document.getElementById("keySpecs"),
     uses: document.getElementById("typicalUses"),
+    mistakes: document.getElementById("commonMistakes"),
+    refImg: document.getElementById("refImage"),
+    pinImg: document.getElementById("pinoutImage"),
+    useImg: document.getElementById("usageImage"),
     refs: document.getElementById("referencesSection"),
+    shops: document.getElementById("shopLinks"),
     hint: document.getElementById("datasheetHint"),
     status: document.getElementById("aiStatusText"),
     loader: document.getElementById("globalLoader")
@@ -1031,6 +1138,7 @@
             return;
         }
         
+        // Updated constraints for better mobile support
         const constraints = {
             audio: false,
             video: {
@@ -1048,7 +1156,13 @@
         }
 
         video.srcObject = cameraStream;
-        try { await video.play(); } catch (playErr) { console.error("Video play error:", playErr); }
+        
+        // Explicitly play to avoid autoplay issues on some mobile browsers
+        try {
+            await video.play();
+        } catch (playErr) {
+            console.error("Video play error:", playErr);
+        }
 
         video.style.display = "block";
         cameraPreview.style.display = "none";
@@ -1056,13 +1170,20 @@
         
         analyzeCameraBtn.disabled = false;
         
-        toggleCameraBtn.innerHTML = `${ICONS.stop} Stop`;
+        // UPDATE BUTTON STATE
+        toggleCameraBtn.innerHTML = `${ICONS.stop} Stop Camera`;
         toggleCameraBtn.className = "btn-camera-toggle stop";
         
         cameraStatusText.textContent = "STATUS: ACTIVE";
     } catch (err) {
         console.error("Camera Error:", err);
-        cameraStatusText.textContent = "Error: Access Denied or No Camera";
+        let msg = "Camera error";
+        if (err.name === 'NotAllowedError') msg = "Permission denied";
+        else if (err.name === 'NotFoundError') msg = "No camera found";
+        else if (err.name === 'NotReadableError') msg = "Camera in use";
+        else if (!window.isSecureContext) msg = "HTTPS required for camera";
+        
+        cameraStatusText.textContent = `Error: ${msg}`;
     }
   }
 
@@ -1073,7 +1194,8 @@
     }
     video.style.display = "none";
     
-    toggleCameraBtn.innerHTML = `${ICONS.play} Start`;
+    // UPDATE BUTTON STATE
+    toggleCameraBtn.innerHTML = `${ICONS.play} Start Camera`;
     toggleCameraBtn.className = "btn-camera-toggle start";
     
     cameraStatusText.textContent = "STATUS: STOPPED";
@@ -1086,11 +1208,7 @@
 
   // Capture & Analyze
   analyzeCameraBtn.addEventListener('click', async () => {
-    // If camera isn't running, just simulate analysis for demo
-    if (!cameraStream) {
-       runAnalysisMock({ type: 'mock' });
-       return;
-    }
+    if (!cameraStream || isAnalyzing) return;
     
     // Capture
     const w = video.videoWidth;
@@ -1109,7 +1227,7 @@
     cameraPreview.style.display = "block";
     stopCamera(); 
     
-    await runAnalysisMock({ image: dataURL });
+    await runAnalysis({ image: dataURL });
   });
 
   // Upload Logic
@@ -1120,6 +1238,7 @@
     if(file) handleFile(file);
   });
   
+  // Drag and drop handlers
   uploadDropzone.addEventListener('dragover', (e) => {
       e.preventDefault();
       uploadDropzone.classList.add('dragover');
@@ -1144,7 +1263,7 @@
         uploadPrompt.style.display = "none";
         analyzeUploadBtn.disabled = false;
         
-        analyzeUploadBtn.onclick = () => runAnalysisMock({ image: url });
+        analyzeUploadBtn.onclick = () => runAnalysis({ image: url });
     };
     reader.readAsDataURL(file);
   }
@@ -1152,14 +1271,15 @@
   // Manual Logic
   manualSearchBtn.addEventListener('click', () => {
     const txt = manualInput.value.trim();
-    if(txt) runAnalysisMock({ queryText: txt });
+    if(txt) runAnalysis({ queryText: txt });
   });
+  
   manualInput.addEventListener('keypress', (e) => {
       if(e.key === 'Enter') manualSearchBtn.click();
   });
 
-  // MOCK Analysis (Since we don't have the backend)
-  async function runAnalysisMock(payload) {
+  // Main Analysis Function
+  async function runAnalysis(payload) {
     if(isAnalyzing) return;
     isAnalyzing = true;
     els.loader.style.display = "block";
@@ -1169,34 +1289,29 @@
     els.name.textContent = "Analyzing...";
     els.category.textContent = "Please wait";
     
-    // Simulate Network Delay
-    setTimeout(() => {
-        const mockData = {
-            name: payload.queryText || "ESP32-WROOM-32",
-            category: "Microcontroller / SoC",
-            description: "The ESP32 is a low-cost, low-power system on a chip microcontrollers with integrated Wi-Fi and dual-mode Bluetooth. It is widely used in IoT applications.",
-            key_specs: [
-                "Dual-core 32-bit LX6 microprocessor",
-                "Wi-Fi: 802.11 b/g/n",
-                "Bluetooth: v4.2 BR/EDR and BLE",
-                "Clock frequency: up to 240 MHz",
-                "Operating Voltage: 2.2V - 3.6V"
-            ],
-            typical_uses: [
-                "Smart Home Devices",
-                "Industrial Automation",
-                "Wearable Electronics",
-                "IoT Sensor Hubs"
-            ],
-            datasheet_url: "https://www.espressif.com/sites/default/files/documentation/esp32_datasheet_en.pdf",
-            datasheet_hint: "ESP32 Wroom Datasheet PDF"
-        };
-
-        populateResults(mockData);
+    try {
+        const res = await fetch('/api/electro-lookup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        
+        const data = await res.json();
+        
+        if(!res.ok) throw new Error(data.error || "API Error");
+        
+        populateResults(data);
         els.status.textContent = "Analysis Complete";
-        els.loader.style.display = "none";
+
+    } catch (err) {
+        console.error(err);
+        els.name.textContent = "Error";
+        els.desc.innerHTML = `<p style="color:#ef4444">Failed: ${err.message}. Check API configuration.</p>`;
+        els.status.textContent = "Failed";
+    } finally {
         isAnalyzing = false;
-    }, 1500);
+        els.loader.style.display = "none";
+    }
   }
 
   function renderList(el, items) {
@@ -1208,19 +1323,55 @@
   }
 
   function populateResults(data) {
-    els.name.textContent = data.name;
-    els.category.textContent = data.category;
-    els.desc.innerHTML = `<p>${data.description}</p>`;
+    els.name.textContent = data.name || "Unknown";
+    els.category.textContent = data.category || "General Electronics";
+    
+    els.desc.innerHTML = `<p>${data.description || "No description available."}</p>`;
     
     renderList(els.specs, data.key_specs);
     renderList(els.uses, data.typical_uses);
+    renderList(els.mistakes, data.common_mistakes);
     
+    // Images
+    const updateImg = (el, src) => {
+        if(src) {
+            el.src = src;
+            el.style.display = "block";
+        } else {
+            el.style.display = "none";
+        }
+    };
+    updateImg(els.refImg, data.real_image);
+    updateImg(els.pinImg, data.pinout_image);
+    updateImg(els.useImg, data.usage_image);
+
+    // Links
     els.refs.innerHTML = '';
     if(data.datasheet_url) {
         els.refs.innerHTML += `<a href="${data.datasheet_url}" target="_blank" class="chip-link">📄 PDF Datasheet</a>`;
     }
+    if(data.references) {
+        data.references.forEach(r => {
+            els.refs.innerHTML += `<a href="${r.url}" target="_blank" class="chip-link">🔗 ${r.title}</a>`;
+        });
+    }
+
+    els.shops.innerHTML = '';
+    if(data.shop_links) {
+        Object.entries(data.shop_links).forEach(([name, url]) => {
+            els.shops.innerHTML += `<a href="${url}" target="_blank" class="chip-link">🛒 ${name}</a>`;
+        });
+    }
+    
     els.hint.innerHTML = `<p style="font-size:0.85rem"><i>Tip: Search Google for "${data.datasheet_hint || data.name + ' datasheet'}"</i></p>`;
   }
+
+  // Auto-start camera on load if available
+  window.addEventListener('load', () => {
+    // Optional: Start camera automatically
+    // startCamera();
+  });
+
 </script>
 </body>
 </html>
