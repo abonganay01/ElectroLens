@@ -127,31 +127,33 @@
 
     .brand {
         display: flex;
-        align-items: center;
-        gap: 1rem;
+        align-items: center;          /* Keeps the entire group centered vertically */
     }
 
-    .brand-info {
+    .brand-group {
         display: flex;
-        flex-direction: column;
-        justify-content: center;
+        flex-direction: column;       /* Stack logo on top, text below */
+        align-items: left;          /* Center both horizontally */
+        justify-content: center;      /* Center vertically inside parent */
     }
 
     .nav-logo {
-        height: 38px;
+        height: 52px;                 /* Bigger logo (adjust as needed) */
         width: auto;
-        display: block;
-        margin-bottom: 2px;
         object-fit: contain;
+        display: block;
     }
 
-    .brand-info p {
-        font-size: 0.8rem;
+    .brand-subtitle {
+        font-size: 0.85rem;
         color: var(--text-muted);
         font-weight: 500;
-        /* Slight offset to align nicely with the logo text weight */
-        margin-left: 2px;
+        margin-top: 4px;              /* Spacing between logo and subtitle */
+        line-height: 1.1;
+        margin-left: 10px;
     }
+
+
 
     .header-actions {
         display: flex;
@@ -766,12 +768,12 @@
   <!-- HEADER -->
   <header class="site-header">
     <div class="brand">
-      <!-- Replaced Logo Box and Text with Image -->
-      <div class="brand-info">
-        <img src="/ELECTRO.png" alt="ElectroLens" class="nav-logo">
-        <p>AI Component Analyzer</p>
-      </div>
+    <div class="brand-group">
+        <img src="/assets/ELECTRO.png" alt="ElectroLens" class="nav-logo">
+        <span class="brand-subtitle">AI Component Analyzer</span>
     </div>
+    </div>
+
     <div class="header-actions">
       <a id="aboutLink" class="nav-link">About</a>
       <button class="theme-toggle" id="themeToggle" title="Toggle Theme">
