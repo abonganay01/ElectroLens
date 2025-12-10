@@ -129,18 +129,22 @@
     .brand {
         display: flex;
         flex-direction: column;
-        align-items: flex-start; /* FIX: 'left' is invalid CSS */
+        align-items: center; /* Changed from flex-start to center for better alignment */
+        justify-content: center;
         gap: 0.25rem;
+        text-align: center;
     }
 
-    /* Logo handling: Fallback styles if image breaks */
+    /* Logo handling: Optimized for size and mobile responsiveness */
     .brand-logo {
         display: block;
         width: auto;
-        height: 38px; /* Adjusted height for image */
+        height: 54px; /* Increased from 38px for better visibility */
+        max-width: 100%; /* Prevents overflow on very small screens */
         object-fit: contain;
         filter: none;
         margin-bottom: 2px;
+        transition: height 0.3s ease; /* Smooth resizing */
     }
     
     .brand-title-text {
@@ -700,11 +704,13 @@
         .part-name { font-size: 1.75rem; }
         .mode-switcher { overflow-x: auto; }
         .ref-grid { grid-template-columns: repeat(3, 1fr); }
+        .brand-logo { height: 42px; } /* Slightly smaller for tablets/mobile */
     }
     
     @media (max-width: 480px) {
         .ref-grid { grid-template-columns: 1fr; } 
         .ref-image-box { aspect-ratio: 16/9; }
+        .brand-logo { height: 36px; } /* Optimized for small phones */
     }
   </style>
 </head>
